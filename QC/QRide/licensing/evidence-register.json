@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "platform": "QRide",
+  "jurisdiction": "CA-QC",
+  "reviewDateToronto": "2026-10-14",
+  "status": "DRAFT_PREPARATION",
+  "applicationSubmitted": false,
+  "authorizationVerified": false,
+  "publicAccess": "closed",
+  "livePayments": "disabled",
+  "evidence": [
+    {
+      "id": "operator-route",
+      "requirement": "Confirm applicable transport operator/intermediary authorization route with CTQ/MTMD",
+      "status": "NEEDS_AUTHORITY_CONFIRMATION",
+      "evidenceReference": null,
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "drivers",
+      "requirement": "Qualification route, licence, screening, training and review/expiry evidence",
+      "status": "MISSING",
+      "evidenceReference": null,
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "vehicles",
+      "requirement": "Vehicle eligibility, registration, inspection and daily defect controls",
+      "status": "MISSING",
+      "evidenceReference": null,
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "insurance",
+      "requirement": "Insurer-approved coverage for availability, pickup and occupied-trip states",
+      "status": "MISSING",
+      "evidenceReference": null,
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "billing",
+      "requirement": "Revenu Quebec tax/mandatory billing/SRS obligations and integration evidence",
+      "status": "NEEDS_AUTHORITY_CONFIRMATION",
+      "evidenceReference": null,
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "coverage",
+      "requirement": "Municipality and airport permissions/coverage by pickup zone",
+      "status": "MISSING",
+      "evidenceReference": null,
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "entity",
+      "requirement": "Applicant legal identity, NEQ and authorized representative",
+      "status": "MISSING",
+      "evidenceReference": null,
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "privacy",
+      "requirement": "Privacy, security, access/retention, French consumer documents and complaint procedures",
+      "status": "NEEDS_QUALIFIED_REVIEW",
+      "evidenceReference": null,
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "payment",
+      "requirement": "Payment-provider sandbox/capability and reconciliation evidence",
+      "status": "MISSING",
+      "evidenceReference": null,
+      "reviewedBy": null,
+      "reviewedAt": null
+    },
+    {
+      "id": "regression",
+      "requirement": "Resolve governed-suite release blockers and record security tests",
+      "status": "BLOCKED",
+      "evidenceReference": null,
+      "reviewedBy": null,
+      "reviewedAt": null
+    }
+  ]
+}
