@@ -125,8 +125,8 @@ test('stay booking: concurrent requests for the same nights produce exactly one 
 test('stay booking: confirm, early cancellation refunds in full, host calendar blocks', async () => {
   const hold = await api('POST', `/api/stays/${listingId}/book`, { token: guest, body: { checkIn: iso(60), checkOut: iso(62), guests: 2 } })
   const id = hold.body.booking.id
-  assert.equal((await api('POST', `/api/bookings/${id}/confirm`, { token: guest2 })).status, 409)
-  const confirmed = await api('POST', `/api/bookings/${id}/confirm`, { token: guest })
+  assert.equal((await api('POST', `/api/bookings/${id}/checkout`, { token: guest2 })).status, 404)
+  const confirmed = await api('POST', `/api/bookings/${id}/checkout`, { token: guest })
   assert.equal(confirmed.body.booking.status, 'CONFIRMED')
   assert.ok(confirmed.body.booking.listing.address)
   assert.equal((await api('GET', `/api/stays?checkIn=${iso(61)}&checkOut=${iso(63)}`)).body.listings.length, 0)
@@ -144,7 +144,7 @@ test('stay booking: confirm, early cancellation refunds in full, host calendar b
 test('stay booking: expired hold frees the dates and cannot be confirmed', async () => {
   const hold = await api('POST', `/api/stays/${listingId}/book`, { token: guest, body: { checkIn: iso(80), checkOut: iso(82), guests: 2 } })
   await db().stayBooking.update({ where: { id: hold.body.booking.id }, data: { holdExpiresAt: new Date(Date.now() - 1000) } })
-  assert.equal((await api('POST', `/api/bookings/${hold.body.booking.id}/confirm`, { token: guest })).body.error.code, 'HOLD_EXPIRED')
+  assert.equal((await api('POST', `/api/bookings/${hold.body.booking.id}/checkout`, { token: guest })).body.error.code, 'HOLD_EXPIRED')
   assert.equal((await api('POST', `/api/stays/${listingId}/book`, { token: guest2, body: { checkIn: iso(80), checkOut: iso(82), guests: 2 } })).status, 201)
 })
 

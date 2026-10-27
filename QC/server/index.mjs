@@ -4,11 +4,13 @@ import { profile } from '../../countries/canada/profile.mjs'
 import { createHandler } from './app.mjs'
 import { db, disconnectDb } from './lib/db.mjs'
 import { expireStaleHolds } from './routes/stays.mjs'
+import { paymentsMode, stripeConfigProblems } from './lib/payments.mjs'
 
 const problems = []
 if (!process.env.QC_DATABASE_URL) problems.push('QC_DATABASE_URL is required')
 if (!process.env.QC_AUTH_SECRET || process.env.QC_AUTH_SECRET.length < 32) problems.push('QC_AUTH_SECRET must be at least 32 characters')
 if (process.env.QC_PAYMENTS_MODE === 'simulated' && process.env.NODE_ENV === 'production') problems.push('QC_PAYMENTS_MODE=simulated is not allowed in production')
+problems.push(...stripeConfigProblems())
 if (problems.length) {
   console.error(`[qc-api] refusing to start:\n - ${problems.join('\n - ')}`)
   process.exit(1)
@@ -20,7 +22,7 @@ const corsOrigins = String(process.env.QC_CORS_ORIGINS || 'http://127.0.0.1:5190
 
 await db().$queryRaw`SELECT 1`
 const server = createServer(createHandler({ corsOrigins }))
-server.listen(port, host, () => console.log(`[qc-api] ${profile.key} listening on http://${host}:${port} (payments: ${process.env.QC_PAYMENTS_MODE === 'simulated' ? 'simulated' : 'disabled'})`))
+server.listen(port, host, () => console.log(`[qc-api] ${profile.key} listening on http://${host}:${port} (payments: ${paymentsMode()})`))
 
 const sweep = setInterval(() => expireStaleHolds().catch((err) => console.error('[qc-api] hold sweep failed', err)), 60_000)
 const shutdown = async () => {

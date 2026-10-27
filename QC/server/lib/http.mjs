@@ -21,6 +21,17 @@ export function sendJson(res, status, body, headers = {}) {
   res.end(JSON.stringify(body))
 }
 
+export async function readRaw(req) {
+  const chunks = []
+  let total = 0
+  for await (const chunk of req) {
+    total += chunk.length
+    if (total > MAX_BODY_BYTES) throw new HttpError(413, 'PAYLOAD_TOO_LARGE', 'Request body is too large.')
+    chunks.push(chunk)
+  }
+  return Buffer.concat(chunks)
+}
+
 export async function readJson(req) {
   if (req.method === 'GET' || req.method === 'HEAD') return {}
   const chunks = []

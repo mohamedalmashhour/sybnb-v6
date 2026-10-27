@@ -1,7 +1,8 @@
 // QC backend request handler. Kept separate from index.mjs so tests can mount it on a random port.
 import { profile } from '../../countries/canada/profile.mjs'
 import { authenticate } from './lib/auth.mjs'
-import { HttpError, createRouter, readJson, sendJson } from './lib/http.mjs'
+import { HttpError, createRouter, readJson, readRaw, sendJson } from './lib/http.mjs'
+import { handleStripeEvent, paymentsMode, verifyStripeEvent } from './lib/payments.mjs'
 import { accountRoutes } from './routes/account.mjs'
 import { adminRoutes } from './routes/admin.mjs'
 import { rideRoutes } from './routes/rides.mjs'
@@ -9,7 +10,7 @@ import { stayRoutes } from './routes/stays.mjs'
 
 export function createHandler({ corsOrigins = [] } = {}) {
   const router = createRouter()
-  router.add('GET /api/health', async () => ({ ok: true, country: profile.key, gates: profile.gates, payments: process.env.QC_PAYMENTS_MODE === 'simulated' ? 'simulated' : 'disabled' }))
+  router.add('GET /api/health', async () => ({ ok: true, country: profile.key, gates: profile.gates, payments: paymentsMode() }))
   router.add('GET /api/config', async () => ({
     ok: true,
     currency: profile.currencies.default,
@@ -35,6 +36,13 @@ export function createHandler({ corsOrigins = [] } = {}) {
     }
     try {
       const url = new URL(req.url, 'http://local')
+      // Stripe signs the exact bytes, so this route reads the raw body before any JSON parsing.
+      if (url.pathname === '/api/webhooks/stripe' && req.method === 'POST') {
+        if (paymentsMode() !== 'stripe') throw new HttpError(404, 'NOT_FOUND', 'Stripe is not enabled.')
+        const event = verifyStripeEvent(await readRaw(req), req.headers['stripe-signature'])
+        sendJson(res, 200, { ok: true, ...(await handleStripeEvent(event)) })
+        return
+      }
       const match = router.match(req.method, url.pathname)
       if (!match) throw new HttpError(404, 'NOT_FOUND', 'No QC API route matched this request.')
       if (match.methodNotAllowed) throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Method not allowed.')

@@ -2,13 +2,13 @@
 import { createApi } from '../shared/api.mjs'
 import {
   $, SHARED_CSS, accountBar, busy, cad, errorText, esc, pctText, fmtDateTime, i18n, installDialog, message,
-  quebecDate, renderApplication, renderApplicationsReview, requireSignIn, statusLabel, statusPill, t,
+  quebecDate, takeParam, renderApplication, renderApplicationsReview, requireSignIn, statusLabel, statusPill, t,
 } from '../shared/ui.mjs'
 
 const api = createApi('qride')
 const state = { page: 'ride', quote: null, activeRideId: null, historyId: null, health: null, form: { pickup: '', dropoff: '', category: 'STANDARD', when: 'now', date: '', time: '' }, driverPos: '' }
 let poll = null
-const ACTIVE = ['REQUESTED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS']
+const ACTIVE = ['PAYMENT_PENDING', 'REQUESTED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS']
 
 document.head.insertAdjacentHTML('beforeend', `<style>${SHARED_CSS}
 .live{display:flex;gap:12px;align-items:center}.dot{width:10px;height:10px;border-radius:50%;background:#3b9a62;animation:pulse 1.4s infinite}
@@ -156,8 +156,9 @@ function showQuote() {
   $('requestBtn').onclick = () => busy($('requestBtn'), $('requestError'), async () => {
     const scheduledFor = state.form.when === 'schedule' ? scheduledInstant() : null
     if (state.form.when === 'schedule' && !scheduledFor) throw new Error(t('Choisissez la date et l’heure.', 'Choose the date and time.'))
-    const { ride: r } = await api.post('/api/rides', { quoteId: q.id, scheduledFor: scheduledFor?.toISOString() })
+    const { ride: r, checkoutUrl } = await api.post('/api/rides', { quoteId: q.id, scheduledFor: scheduledFor?.toISOString() })
     state.quote = null
+    if (checkoutUrl) { location.assign(checkoutUrl); return }
     if (scheduledFor) { message(t('Course planifiée', 'Ride scheduled'), `${fmtDateTime(scheduledFor)} · ${cad(r.totalCents)}`); go('trips') } else go('ride', { activeRideId: r.id })
   })
 }
@@ -174,7 +175,7 @@ function rideCard(r, { asDriver = false } = {}) {
 }
 
 const EVENTS = {
-  REQUESTED: ['Course demandée', 'Ride requested'], ACCEPTED: ['Chauffeur assigné', 'Driver assigned'], DRIVER_ARRIVED: ['Chauffeur arrivé', 'Driver arrived'],
+  REQUESTED: ['Course demandée', 'Ride requested'], PAYMENT_AUTHORIZED: ['Paiement autorisé', 'Payment authorized'], ACCEPTED: ['Chauffeur assigné', 'Driver assigned'], DRIVER_ARRIVED: ['Chauffeur arrivé', 'Driver arrived'],
   TRIP_STARTED: ['Course commencée', 'Trip started'], TRIP_COMPLETED: ['Course terminée', 'Trip completed'], CANCELLED_BY_RIDER: ['Annulée par le passager', 'Cancelled by rider'],
   RELEASED_BY_DRIVER: ['Chauffeur désisté — recherche d’un autre chauffeur', 'Driver released — finding another driver'],
 }
@@ -189,10 +190,11 @@ async function liveRide() {
     if (nextSignature === signature) return
     signature = nextSignature
     $('main').innerHTML = `<div class="grid hero"><section><span class="eyebrow">${t('COURSE EN DIRECT', 'LIVE RIDE')}</span>
-      <h1>${r.status === 'REQUESTED' ? t('Recherche d’un<br>chauffeur…', 'Finding your<br>driver…') : statusLabel(r.status)}</h1>
+      <h1>${r.status === 'REQUESTED' ? t('Recherche d’un<br>chauffeur…', 'Finding your<br>driver…') : r.status === 'PAYMENT_PENDING' ? t('Confirmation du<br>paiement…', 'Confirming<br>payment…') : statusLabel(r.status)}</h1>
+      ${r.status === 'PAYMENT_PENDING' ? `<p>${t('Le montant est autorisé sur votre carte et prélevé seulement à la fin de la course.', 'The amount is authorized on your card and charged only when the trip ends.')}</p>` : ''}
       ${ACTIVE.includes(r.status) ? `<div class="live"><span class="dot"></span><span class="small">${t('Mise à jour automatique', 'Updating automatically')}</span></div>` : ''}
       ${r.driver && ACTIVE.includes(r.status) ? `<p class="notice">${t('Vérifiez le nom, le véhicule et la plaque avant de monter.', 'Check the name, vehicle and plate before boarding.')}</p>` : ''}
-      <div class="row" style="margin-top:20px">${['REQUESTED', 'ACCEPTED', 'ARRIVED'].includes(r.status) ? `<button class="secondary" id="cancelRide">${t('Annuler la course', 'Cancel ride')}</button>` : ''}
+      <div class="row" style="margin-top:20px">${['PAYMENT_PENDING', 'REQUESTED', 'ACCEPTED', 'ARRIVED'].includes(r.status) ? `<button class="secondary" id="cancelRide">${t('Annuler la course', 'Cancel ride')}</button>` : ''}
       ${!ACTIVE.includes(r.status) ? `<button class="primary" id="newRide">${t('Nouvelle course', 'New ride')}</button>` : ''}</div></section>
       <section class="card">${rideCard(r)}</section></div>`
     $('cancelRide')?.addEventListener('click', (e) => {
@@ -219,7 +221,7 @@ async function trips() {
       <td>${cad(r.totalCents)}</td><td>${statusPill(r.status)}</td><td><button class="secondary" data-ride="${r.id}">${t('Détails', 'Details')}</button></td></tr>`).join('')}</tbody></table>`
       : `<p>${t('Aucune course pour l’instant.', 'No rides yet.')}</p>`}</section>
     <section class="card">${selected ? `<h2>${t('Registre du trajet', 'Trip record')}</h2>${rideCard(selected)}
-      ${['REQUESTED', 'ACCEPTED', 'ARRIVED'].includes(selected.status) ? `<button class="secondary" id="cancelSel" style="margin-top:14px">${t('Annuler', 'Cancel')}</button>` : ''}`
+      ${['PAYMENT_PENDING', 'REQUESTED', 'ACCEPTED', 'ARRIVED'].includes(selected.status) ? `<button class="secondary" id="cancelSel" style="margin-top:14px">${t('Annuler', 'Cancel')}</button>` : ''}`
       : `<p>${t('Choisissez une course pour voir le chauffeur, le véhicule et chaque étape horodatée.', 'Pick a ride to see the driver, vehicle and every timestamped step.')}</p>`}</section></div>`
   document.querySelectorAll('[data-ride]').forEach((b) => { b.onclick = () => go('trips', { historyId: b.dataset.ride }) })
   $('cancelSel')?.addEventListener('click', (e) => busy(e.target, null, async () => { await api.post(`/api/rides/${selected.id}/cancel`); render() }))
@@ -304,5 +306,13 @@ $('language').onclick = () => { i18n.set(i18n.lang === 'fr' ? 'en' : 'fr'); rend
 installDialog()
 ;(async () => {
   try { [state.health] = await Promise.all([api.get('/api/health'), api.loadUser()]) } catch {}
+  // Back from Stripe: show the ride, which goes live once Stripe confirms the authorization.
+  const paidRide = takeParam('ride')
+  const unpaidRide = takeParam('unpaid')
+  if (paidRide) state.activeRideId = paidRide
+  if (unpaidRide) {
+    state.activeRideId = unpaidRide
+    message(t('Paiement non terminé', 'Payment not completed'), t('La course n’est pas envoyée aux chauffeurs tant que le paiement n’est pas autorisé. Annulez-la et demandez un nouveau prix.', 'The ride is not sent to drivers until payment is authorized. Cancel it and get a new price.'))
+  }
   render()
 })()

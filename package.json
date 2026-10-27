@@ -102,7 +102,7 @@
     "qc:api": "node --env-file-if-exists=QC/server/.env QC/server/index.mjs",
     "qc:db:generate": "prisma generate --schema QC/server/prisma/schema.prisma",
     "qc:db:migrate": "node --env-file-if-exists=QC/server/.env node_modules/prisma/build/index.js migrate deploy --schema QC/server/prisma/schema.prisma",
-    "qc:test": "node --env-file-if-exists=QC/server/.env --test QC/server/test/",
+    "qc:test": "node --env-file-if-exists=QC/server/.env --test --test-concurrency=1 QC/server/test/",
     "qc:seed:dev": "node --env-file-if-exists=QC/server/.env QC/server/scripts/seed-dev.mjs"
   },
   "dependencies": {

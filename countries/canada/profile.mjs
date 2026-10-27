@@ -39,7 +39,8 @@ export const profile = Object.freeze({
     hostCommissionBp: 300,
     fullRefundCutoffHours: 72,
     lateCancelRefundBp: 5000,
-    holdMinutes: 15,
+    // Stripe Checkout sessions last at least 30 minutes, so the hold matches.
+    holdMinutes: 30,
     maxNights: 30,
     // Québec requires a short-term-rental registration number on every published listing.
     requireRegistrationNumber: true,

@@ -2,7 +2,7 @@
 import { createApi } from '../shared/api.mjs'
 import {
   $, SHARED_CSS, accountBar, busy, cad, closeDialog, errorText, esc, pctText, fmtDate, fmtDateTime, i18n, installDialog, message,
-  openDialog, quebecDate, renderApplication, renderApplicationsReview, requireSignIn, statusPill, t,
+  openDialog, quebecDate, takeParam, renderApplication, renderApplicationsReview, requireSignIn, statusPill, t,
 } from '../shared/ui.mjs'
 
 const api = createApi('qtr')
@@ -142,7 +142,8 @@ function checkout(booking) {
     <div class="row"><button class="secondary" id="payLater">${t('Plus tard', 'Later')}</button><button class="primary" id="payNow">${t('Payer', 'Pay')} ${cad(booking.totalCents)}</button></div>`)
   body.querySelector('#payLater').onclick = () => { closeDialog(); go('trips') }
   body.querySelector('#payNow').onclick = () => busy(body.querySelector('#payNow'), body.querySelector('#payError'), async () => {
-    const { booking: b } = await api.post(`/api/bookings/${booking.id}/confirm`)
+    const { booking: b, checkoutUrl } = await api.post(`/api/bookings/${booking.id}/checkout`)
+    if (checkoutUrl) { location.assign(checkoutUrl); return }
     closeDialog()
     message(t('Réservation confirmée', 'Booking confirmed'), t(`Votre séjour du ${fmtDate(b.checkIn)} au ${fmtDate(b.checkOut)} est confirmé. Adresse : ${b.listing.address}`, `Your stay from ${fmtDate(b.checkIn)} to ${fmtDate(b.checkOut)} is confirmed. Address: ${b.listing.address}`))
     go('trips')
@@ -305,10 +306,36 @@ async function listingReview() {
   })
 }
 
+// Back from Stripe: the booking is confirmed by Stripe's webhook, so wait for it here.
+async function afterStripe() {
+  const paid = takeParam('paid')
+  const unpaid = takeParam('unpaid')
+  if (unpaid) {
+    message(t('Paiement non terminé', 'Payment not completed'), t('Vos dates restent retenues jusqu’à la fin du délai. Vous pouvez payer depuis « Mes réservations ».', 'Your dates stay held until the hold ends. You can pay from "My bookings".'))
+    state.page = 'trips'
+  }
+  if (!paid || !api.user) return
+  state.page = 'trips'
+  openDialog(`<h2>${t('Confirmation du paiement…', 'Confirming payment…')}</h2><p>${t('Nous attendons la confirmation de Stripe. Cela prend quelques secondes.', 'Waiting for Stripe to confirm. This takes a few seconds.')}</p>`)
+  for (let i = 0; i < 20; i++) {
+    const { booking: b } = await api.get(`/api/bookings/${paid}`).catch(() => ({}))
+    if (b?.status === 'CONFIRMED') {
+      message(t('Réservation confirmée', 'Booking confirmed'), t(`Votre séjour du ${fmtDate(b.checkIn)} au ${fmtDate(b.checkOut)} est confirmé. Adresse : ${b.listing.address}`, `Your stay from ${fmtDate(b.checkIn)} to ${fmtDate(b.checkOut)} is confirmed. Address: ${b.listing.address}`))
+      return
+    }
+    if (b && b.status !== 'HOLD') break
+    await new Promise((r) => setTimeout(r, 1500))
+  }
+  message(t('Paiement en cours de traitement', 'Payment processing'), t('Votre paiement est reçu mais pas encore confirmé. Votre réservation s’affichera dans « Mes réservations » dès sa confirmation.', 'Your payment is received but not yet confirmed. The booking will show in "My bookings" once confirmed.'))
+}
+
 // ---------------- Boot ----------------
 $('language').onclick = () => { i18n.set(i18n.lang === 'fr' ? 'en' : 'fr'); render() }
 installDialog()
 ;(async () => {
   try { [state.health] = await Promise.all([api.get('/api/health'), api.loadUser()]) } catch {}
+  const waiting = afterStripe()
+  render()
+  await waiting
   render()
 })()

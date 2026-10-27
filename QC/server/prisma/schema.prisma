@@ -64,6 +64,7 @@ enum RideCategory {
 }
 
 enum RideStatus {
+  PAYMENT_PENDING
   REQUESTED
   ACCEPTED
   ARRIVED
@@ -277,6 +278,52 @@ model RideEvent {
 
   @@index([rideId, at])
   @@map("qc_ride_events")
+}
+
+enum PaymentKind {
+  STAY
+  RIDE
+
+  @@map("qc_payment_kind")
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  CANCELED
+  FAILED
+  EXPIRED
+
+  @@map("qc_payment_status")
+}
+
+// One Stripe Checkout Session per stay booking or ride. Money facts come only from verified webhooks.
+model Payment {
+  id                    String        @id @default(uuid()) @db.Uuid
+  kind                  PaymentKind
+  userId                String        @map("user_id") @db.Uuid
+  stayBookingId         String?       @unique @map("stay_booking_id") @db.Uuid
+  rideId                String?       @unique @map("ride_id") @db.Uuid
+  amountCents           Int           @map("amount_cents")
+  capturedCents         Int           @default(0) @map("captured_cents")
+  refundedCents         Int           @default(0) @map("refunded_cents")
+  status                PaymentStatus @default(PENDING)
+  stripeSessionId       String?       @unique @map("stripe_session_id")
+  stripePaymentIntentId String?       @unique @map("stripe_payment_intent_id")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+
+  @@map("qc_payments")
+}
+
+// Processed Stripe event ids, so a redelivered webhook is applied once.
+model StripeEvent {
+  id         String   @id
+  type       String
+  receivedAt DateTime @default(now()) @map("received_at")
+
+  @@map("qc_stripe_events")
 }
 
 model AuditLog {

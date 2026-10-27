@@ -28,8 +28,8 @@ from the built-in list, "use my location", or typed as `lat, lng`.
 
 ## Still closed
 
-Payments run in `QC_PAYMENTS_MODE=simulated` only (refused in production); Stripe Canada is the
-next phase. No deployment, public access or live licence exists. Tax/fee rates await accountant
+Payments: `simulated` for dev, or `stripe` with sandbox test keys (see `server/README.md`); live keys
+are refused. No deployment, public access or live licence exists. Tax/fee rates await accountant
 confirmation; CITQ, passenger-transport authorization, insurance and Law 25 reviews are owner
 actions. Licensing preparation: `QRide/licensing/`, `QTR/licensing/`.
 Store identity documents and credentials outside Git.

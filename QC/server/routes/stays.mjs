@@ -4,6 +4,7 @@ import { HttpError, badRequest, conflict, forbidden, int, notFound, num, str } f
 import { requireRole, requireUser } from '../lib/auth.mjs'
 import { localMidnight, nightsBetween, parseDate, toDateString, todayIn } from '../lib/dates.mjs'
 import { pct, stayQuote } from '../lib/money.mjs'
+import { createStayCheckout, paymentsMode, refundStay } from '../lib/payments.mjs'
 
 const LIVE = ['HOLD', 'CONFIRMED']
 const liveWhere = (now = new Date()) => ({ OR: [{ status: 'CONFIRMED' }, { status: 'HOLD', holdExpiresAt: { gt: now } }] })
@@ -121,19 +122,22 @@ export function stayRoutes(router, { profile }) {
     }
   })
 
-  // Payment step. Until a payment provider is approved, only QC_PAYMENTS_MODE=simulated can confirm.
-  router.add('POST /api/bookings/:id/confirm', async ({ ctx, params }) => {
+  // Payment step. 'stripe' returns a Checkout URL (the webhook confirms); 'simulated' confirms at once (dev only).
+  router.add('POST /api/bookings/:id/checkout', async ({ ctx, params }) => {
     const user = requireUser(ctx)
-    if (process.env.QC_PAYMENTS_MODE !== 'simulated') {
-      throw new HttpError(503, 'PAYMENTS_DISABLED', 'Online payment is not available yet.')
-    }
+    const mode = paymentsMode()
+    if (mode === 'disabled') throw new HttpError(503, 'PAYMENTS_DISABLED', 'Online payment is not available yet.')
+    const b = await db().stayBooking.findUnique({ where: { id: params.id }, include: { listing: true } })
+    if (!b || b.guestId !== user.id) throw notFound()
+    if (b.status !== 'HOLD' || b.holdExpiresAt <= new Date()) throw conflict('HOLD_EXPIRED', 'This reservation hold has expired. Please book again.')
+    if (mode === 'stripe') return { ok: true, checkoutUrl: await createStayCheckout({ booking: b, listing: b.listing, user }) }
     const updated = await db().stayBooking.updateMany({
-      where: { id: params.id, guestId: user.id, status: 'HOLD', holdExpiresAt: { gt: new Date() } },
+      where: { id: b.id, status: 'HOLD', holdExpiresAt: { gt: new Date() } },
       data: { status: 'CONFIRMED', confirmedAt: new Date(), holdExpiresAt: null },
     })
     if (updated.count !== 1) throw conflict('HOLD_EXPIRED', 'This reservation hold has expired. Please book again.')
-    await audit(db(), user.id, 'stay.confirmed', params.id, { payment: 'simulated' })
-    const booking = await db().stayBooking.findUnique({ where: { id: params.id }, include: { listing: true } })
+    await audit(db(), user.id, 'stay.confirmed', b.id, { payment: 'simulated' })
+    const booking = await db().stayBooking.findUnique({ where: { id: b.id }, include: { listing: true } })
     return { ok: true, booking: bookingView(booking) }
   })
 
@@ -163,6 +167,7 @@ export function stayRoutes(router, { profile }) {
     })
     if (updated.count !== 1) throw conflict('NOT_CANCELLABLE', 'This booking changed. Refresh and try again.')
     await audit(db(), user.id, 'stay.cancelled', b.id, { by: 'GUEST', refundCents })
+    await refundStay(b.id, refundCents, user.id, 'guest_cancelled')
     return { ok: true, booking: bookingView({ ...b, status: 'CANCELLED', cancelledBy: 'GUEST', refundCents }) }
   })
 
@@ -270,6 +275,7 @@ export function stayRoutes(router, { profile }) {
     })
     if (updated.count !== 1) throw conflict('NOT_CANCELLABLE', 'Only confirmed bookings can be cancelled.')
     await audit(db(), user.id, 'stay.cancelled', b.id, { by: 'HOST', reason, refundCents: b.totalCents })
+    await refundStay(b.id, b.totalCents, user.id, 'host_cancelled')
     return { ok: true }
   })
 }

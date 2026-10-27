@@ -30,10 +30,10 @@ export const errorText = (err) => (err?.code === 'NETWORK'
 
 export const statusPill = (s) => `<span class="status status-${esc(String(s).toLowerCase())}">${esc(statusLabel(s))}</span>`
 const STATUS = {
-  PENDING: ['En attente', 'Pending'], APPROVED: ['Approuvé', 'Approved'], REJECTED: ['Refusé', 'Rejected'],
+  PENDING: ['En attente', 'Pending'], PAID: ['Payé', 'Paid'], APPROVED: ['Approuvé', 'Approved'], REJECTED: ['Refusé', 'Rejected'],
   DRAFT: ['Brouillon', 'Draft'], PENDING_REVIEW: ['En révision', 'In review'], PUBLISHED: ['Publié', 'Published'], SUSPENDED: ['Suspendu', 'Suspended'],
   HOLD: ['Retenu', 'On hold'], CONFIRMED: ['Confirmé', 'Confirmed'], CANCELLED: ['Annulé', 'Cancelled'], EXPIRED: ['Expiré', 'Expired'], COMPLETED: ['Terminé', 'Completed'],
-  REQUESTED: ['Recherche chauffeur', 'Finding driver'], ACCEPTED: ['Chauffeur en route', 'Driver on the way'], ARRIVED: ['Chauffeur arrivé', 'Driver arrived'], IN_PROGRESS: ['En course', 'In progress'],
+  PAYMENT_PENDING: ['Paiement en attente', 'Awaiting payment'], REQUESTED: ['Recherche chauffeur', 'Finding driver'], ACCEPTED: ['Chauffeur en route', 'Driver on the way'], ARRIVED: ['Chauffeur arrivé', 'Driver arrived'], IN_PROGRESS: ['En course', 'In progress'],
 }
 export const statusLabel = (s) => (STATUS[s] ? t(...STATUS[s]) : s)
 
@@ -200,7 +200,7 @@ textarea{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius
 .error:empty{display:none}
 button:disabled{opacity:.55;cursor:progress}
 .status-cancelled,.status-expired,.status-rejected,.status-suspended{background:#f6e1dc}
-.status-pending,.status-pending_review,.status-hold,.status-requested{background:#f4efd9}
+.status-pending,.status-pending_review,.status-hold,.status-requested,.status-payment_pending{background:#f4efd9}
 .reviewItem{display:flex;justify-content:space-between;gap:16px;align-items:center;border-bottom:1px solid var(--line);padding:14px 0}
 .reviewItem .actions{display:flex;gap:8px;flex:none}
 .reviewItem .actions button{padding:9px 13px}
@@ -212,3 +212,14 @@ button:disabled{opacity:.55;cursor:progress}
 .stack{display:grid;gap:18px}
 @media(max-width:760px){.reviewItem{flex-direction:column;align-items:flex-start}.listing{grid-template-columns:1fr}}
 `
+
+// Reads and removes a one-time query parameter set by the Stripe return URLs.
+export function takeParam(name) {
+  const url = new URL(location.href)
+  const value = url.searchParams.get(name)
+  if (value) {
+    url.searchParams.delete(name)
+    history.replaceState(null, '', url.pathname + (url.search || '') + url.hash)
+  }
+  return value
+}

@@ -1,14 +1,17 @@
 // SR: rider quotes and requests, driver availability, atomic dispatch and the trip lifecycle.
 import { db, audit, isUniqueViolation } from '../lib/db.mjs'
-import { badRequest, conflict, forbidden, notFound, num, oneOf, str } from '../lib/http.mjs'
+import { HttpError, badRequest, conflict, forbidden, notFound, num, oneOf, str } from '../lib/http.mjs'
 import { requireRole, requireUser } from '../lib/auth.mjs'
 import { todayIn } from '../lib/dates.mjs'
 import { haversineM, rideQuote } from '../lib/money.mjs'
+import { captureRide, createRideCheckout, paymentsMode, releaseRide } from '../lib/payments.mjs'
 
 const ACTIVE = ['ACCEPTED', 'ARRIVED', 'IN_PROGRESS']
 const OFFER_RADIUS_M = 15_000
 const SCHEDULE_MIN_MS = 30 * 60_000
 const SCHEDULE_MAX_MS = 30 * 86_400_000
+// A card authorization lasts about 7 days, so card-paid rides can be scheduled at most 6 days ahead.
+const SCHEDULE_MAX_CARD_MS = 6 * 86_400_000
 const OFFER_LEAD_MS = 30 * 60_000
 
 // Driver -> next status, with the event recorded in the trip safety record.
@@ -74,13 +77,22 @@ export function rideRoutes(router, { profile }) {
   router.add('POST /api/rides', async ({ ctx, body }) => {
     const user = requireUser(ctx)
     const quoteId = str(body.quoteId, 'quoteId', { max: 40 })
+    const mode = paymentsMode()
+    if (mode === 'disabled') throw new HttpError(503, 'PAYMENTS_DISABLED', 'Online payment is not available yet.')
     let scheduledFor = null
     if (body.scheduledFor) {
       scheduledFor = new Date(body.scheduledFor)
       const lead = scheduledFor.getTime() - Date.now()
-      if (Number.isNaN(lead) || lead < SCHEDULE_MIN_MS || lead > SCHEDULE_MAX_MS) {
-        throw badRequest('INVALID_SCHEDULE', 'Scheduled rides must be between 30 minutes and 30 days from now.', { field: 'scheduledFor' })
+      const max = mode === 'stripe' ? SCHEDULE_MAX_CARD_MS : SCHEDULE_MAX_MS
+      if (Number.isNaN(lead) || lead < SCHEDULE_MIN_MS || lead > max) {
+        throw badRequest('INVALID_SCHEDULE', `Scheduled rides must be between 30 minutes and ${max / 86_400_000} days from now.`, { field: 'scheduledFor' })
       }
+    }
+    // An earlier ride the rider never paid for is abandoned when they request a new one.
+    const abandoned = await db().ride.findMany({ where: { riderId: user.id, status: 'PAYMENT_PENDING' }, select: { id: true } })
+    for (const a of abandoned) {
+      await db().ride.updateMany({ where: { id: a.id, status: 'PAYMENT_PENDING' }, data: { status: 'CANCELLED', cancelledBy: 'RIDER' } })
+      await releaseRide(a.id, user.id)
     }
     const ride = await db().$transaction(async (tx) => {
       const claimed = await tx.rideQuote.updateMany({ where: { id: quoteId, riderId: user.id, usedAt: null, expiresAt: { gt: new Date() } }, data: { usedAt: new Date() } })
@@ -89,12 +101,13 @@ export function rideRoutes(router, { profile }) {
       if (active && !scheduledFor) throw conflict('RIDE_IN_PROGRESS', 'You already have a ride in progress.')
       const q = await tx.rideQuote.findUnique({ where: { id: quoteId } })
       const created = await tx.ride.create({
-        data: { quoteId: q.id, riderId: user.id, category: q.category, pickup: q.pickup, dropoff: q.dropoff, scheduledFor, totalCents: q.totalCents, breakdown: q.breakdown },
+        data: { quoteId: q.id, riderId: user.id, category: q.category, pickup: q.pickup, dropoff: q.dropoff, scheduledFor, totalCents: q.totalCents, breakdown: q.breakdown, status: mode === 'stripe' ? 'PAYMENT_PENDING' : 'REQUESTED' },
       })
       await tx.rideEvent.create({ data: { rideId: created.id, type: 'REQUESTED', actorId: user.id, data: { scheduledFor } } })
       return created
     })
-    return { status: 201, body: { ok: true, ride: rideView(ride) } }
+    const checkoutUrl = mode === 'stripe' ? await createRideCheckout({ ride, user }) : undefined
+    return { status: 201, body: { ok: true, ride: rideView(ride), checkoutUrl } }
   })
 
   router.add('GET /api/rides', async ({ ctx }) => {
@@ -117,9 +130,10 @@ export function rideRoutes(router, { profile }) {
     const r = await db().ride.findUnique({ where: { id: params.id } })
     if (!r) throw notFound()
     if (r.riderId === user.id) {
-      const updated = await db().ride.updateMany({ where: { id: r.id, status: { in: ['REQUESTED', 'ACCEPTED', 'ARRIVED'] } }, data: { status: 'CANCELLED', cancelledBy: 'RIDER' } })
+      const updated = await db().ride.updateMany({ where: { id: r.id, status: { in: ['PAYMENT_PENDING', 'REQUESTED', 'ACCEPTED', 'ARRIVED'] } }, data: { status: 'CANCELLED', cancelledBy: 'RIDER' } })
       if (updated.count !== 1) throw conflict('NOT_CANCELLABLE', 'This ride can no longer be cancelled.')
       await db().rideEvent.create({ data: { rideId: r.id, type: 'CANCELLED_BY_RIDER', actorId: user.id, data: { previous: r.status } } })
+      await releaseRide(r.id, user.id)
       return { ok: true }
     }
     if (r.driverId === user.id) {
@@ -188,7 +202,10 @@ export function rideRoutes(router, { profile }) {
       const updated = await db().ride.updateMany({ where: { id: params.id, driverId: user.id, status: t.from }, data })
       if (updated.count !== 1) throw conflict('INVALID_STATE', `This ride is not ${t.from.toLowerCase()}.`)
       await db().rideEvent.create({ data: { rideId: params.id, type: t.event, actorId: user.id, data: { at: { lat: driver.lat, lng: driver.lng } } } })
-      if (t.to === 'COMPLETED') await audit(db(), user.id, 'ride.completed', params.id)
+      if (t.to === 'COMPLETED') {
+        await audit(db(), user.id, 'ride.completed', params.id)
+        await captureRide(params.id, user.id)
+      }
       const r = await db().ride.findUnique({ where: { id: params.id }, include: rideInclude })
       return { ok: true, ride: rideView(r, 'driver') }
     })
