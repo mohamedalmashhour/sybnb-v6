@@ -1,35 +1,14 @@
-# QTR Québec
+# QTR Québec — short-term stays
 
-Private short-term-rental app folder, separate from `QC/QRide`. Frontend prototype only;
-no real accounts, inventory, payments, employee records or bookings are stored. CAD prices
-and payments are the agreed sandbox direction, with an optional separate USD MSH reference.
+Connected to the QC API (`../server`). Port 5191 (`npm run qtr:dev`, build: `npm run qtr:build`).
 
-From the root checkout with Node 24 and existing lockfile dependencies:
+- **Guests:** search by city, dates and guests; listing page with unavailable dates; itemized CAD
+  quote (lodging tax, GST, QST, service fee); email-code sign-in; 15-minute hold; payment
+  (simulated until Stripe is enabled); bookings list; cancellation with the 72-hour policy.
+- **Hosts:** application → admin approval; create/edit listings (CITQ number, location via map or
+  coordinates, price, cleaning fee, minimum nights, amenities, photo URLs); submit for review;
+  calendar with date blocks; confirmed bookings with payout; host cancellation (full refund).
+- **Admin** (`QC_ADMIN_EMAILS`): approve/reject hosts, publish/reject listings, suspend published ones.
 
-```sh
-npm run qtr:dev
-npm run qtr:build
-```
-
-Local server: loopback only, strict port 5191. Build: `QC/QTR/dist`. QRide uses a different
-entry/port/build and has no stays/host navigation; QTR has no rider/driver navigation.
-
-This demo has stay search, sample customer account steps, simulated payment actions, host
-sample sign-in/registration and document-review screens, and a public example of admin HR.
-It is not the authenticated V6 admin interface. No external AI requests or payment processing.
-No real personal credentials/documents should be entered.
-The shared in-app Google Maps capsule can set search coordinates after restricted browser
-key/map ID configuration. See `../GOOGLE-MAPS.md`; live provider verification remains pending.
-The real service needs backend
-authentication and role permissions, persistent reservations/calendar concurrency, verified
-property registration/locality/insurance, correct taxes, timezone rules, payment and refund
-processing, incident support and a separately approved release. Account/booking state is lost
-on reload. No auth/account/database is shared with QRide by this prototype.
-
-Folder separation and `private: true` prevent neither unauthorized file access nor web access
-by themselves. No public host, deployment or repository publication was created. Future
-deployment needs access controls; future backend reuse must not mix financial/customer data
-without an explicitly approved architecture. Build artifacts and secrets must remain separate.
-
-Licensing preparation: see `licensing/README.md` and `licensing/evidence-register.json`.
-Sequential implementation plan: `../IMPLEMENTATION-ORDER.md`.
+Photos are https URLs for now (no upload/storage yet). See `../README.md` for running the stack.
+Licensing preparation: `licensing/README.md` and `licensing/evidence-register.json`.

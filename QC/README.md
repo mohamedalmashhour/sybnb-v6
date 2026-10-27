@@ -1,27 +1,35 @@
-# Quebec platform workspaces
+# Québec platform (QC)
 
-Owner direction: QRide first, QTR second. Quebec-wide target; municipality and airport
-permissions are separate evidence, not implied coverage. These private source folders
-are preparation workspaces, not licensed or publicly operating services.
+Canada/Québec stack, separate from the V6 Syria platform: its own API, database and secrets.
 
-- `QRide/`: independent ride app, driver/admin account presentation and licensing dossier.
-- `QTR/`: independent stay app, guest/host/admin presentation and licensing dossier.
-- `CAPSULE-REUSE.md`: existing SYBNB modules reused or requiring a Canada adapter.
-- `IMPLEMENTATION-ORDER.md`: sequential delivery milestones and acceptance evidence.
+- `server/` — QC API (rides + stays). See `server/README.md`.
+- `QTR/` — short-term stays app (guests, hosts, admin). Port 5191.
+- `QRide/` — rides app (riders, drivers, admin). Port 5190.
+- `shared/` — API client, email-code sign-in, applications and admin review used by both apps.
 
-From the repository root, use `npm run qride:dev` (5190) or `npm run qtr:dev` (5191).
-Build with `npm run qride:build` / `npm run qtr:build`. Each binds only to loopback.
-Or use `npm --prefix QC/QRide run dev` / `npm --prefix QC/QTR run dev` with installed
-root dependencies. Node 24 and the existing root lockfile apply; no new dependencies.
-Existing per-app Maps settings now belong in `QC/QRide/.env.local` and
-`QC/QTR/.env.local`; never commit values. App-specific cloud variable names are unchanged.
+## Run everything locally
 
-The active V6 country registry remains Syria-only. Do not set SYBNB_COUNTRY=canada
-expecting these frontend folders to activate a Canadian backend. No Syria financial,
-identity, recipient or customer configuration is inherited by these apps.
+```sh
+npm run qc:db:generate && npm run qc:db:migrate   # once
+npm run qc:seed:dev                               # optional sample host, listings, driver
+npm run qc:api                                    # API on 127.0.0.1:3061
+npm run qtr:dev                                   # http://127.0.0.1:5191
+npm run qride:dev                                 # http://127.0.0.1:5190
+```
 
-Store identity documents, insurance policies, applicant records and credentials in
-restricted storage outside Git. Ignored `private-evidence/` is not an access-control
-system. The committed dossiers contain requirements/status only, not private evidence.
-See the source-backed licensing documents under each app. They are draft preparation,
-not legal opinions, submitted applications or government approvals.
+Sign-in is by email code. In dev (`QC_MAIL_MODE=console`) the code is printed in the
+`qc:api` terminal. Emails listed in `QC_ADMIN_EMAILS` get the admin role. Seeded accounts:
+`host@qc.local` (host) and `driver@qc.local` (driver).
+
+The apps call `VITE_QC_API_URL` (default `http://127.0.0.1:3061`); the API must list the app
+origins in `QC_CORS_ORIGINS`. Google Maps needs per-app restricted browser keys
+(`VITE_GOOGLE_MAPS_BROWSER_KEY`, `VITE_GOOGLE_MAPS_MAP_ID`); without them, places are chosen
+from the built-in list, "use my location", or typed as `lat, lng`.
+
+## Still closed
+
+Payments run in `QC_PAYMENTS_MODE=simulated` only (refused in production); Stripe Canada is the
+next phase. No deployment, public access or live licence exists. Tax/fee rates await accountant
+confirmation; CITQ, passenger-transport authorization, insurance and Law 25 reviews are owner
+actions. Licensing preparation: `QRide/licensing/`, `QTR/licensing/`.
+Store identity documents and credentials outside Git.

@@ -10,8 +10,14 @@ architecture and safety decisions. It overrides convenience. When in doubt, stop
 - Each supported country is an **isolated implementation** under `countries/<country>` with its own
   profile, and (as separation proceeds) its own data, adapters, legal versions, and configuration.
 - The active country is selected by **`SYBNB_COUNTRY`** and loaded via `server/lib/country.mjs`.
-  This release supports **`syria`** only. Québec/Canada is the **operating entity's incorporation**,
-  **not** a service market.
+  The V6 API supports **`syria`** only. Québec/Canada is the **operating entity's incorporation**,
+  **not** a V6 service market.
+- **Owner direction 2026-10-27:** Canada (Québec) is being built as a service market for rides (SR /
+  QRide) and short-term stays (STR / QTR) as a **separate stack** under `QC/`: its own backend
+  (`QC/server`), Prisma schema, database (`QC_DATABASE_URL`), secrets and frontends, configured by
+  `countries/canada/profile.mjs`. QC code may import pure, stateless helpers from the master, but
+  never the master's database client, session store, payment adapters or Syria configuration. All
+  §5 gates (payments, deployment, public access, legal) stay closed for Canada until authorized.
 
 ## 2. Fail-closed country selection (never weaken)
 - Startup **refuses to run** when the country profile is missing, unsupported, or incomplete.

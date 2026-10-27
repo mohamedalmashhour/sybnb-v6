@@ -94,7 +94,16 @@
     "native:stay:ios": "CAP_APP=rezekme-stay cap open ios",
     "native:rides:android": "CAP_APP=rezekme-rides cap open android",
     "native:rides:ios": "CAP_APP=rezekme-rides cap open ios",
-    "icons:rezekme": "python3 scripts/rezekme-icons.py"
+    "icons:rezekme": "python3 scripts/rezekme-icons.py",
+    "qride:dev": "npm --prefix QC/QRide run dev",
+    "qride:build": "npm --prefix QC/QRide run build",
+    "qtr:dev": "npm --prefix QC/QTR run dev",
+    "qtr:build": "npm --prefix QC/QTR run build",
+    "qc:api": "node --env-file-if-exists=QC/server/.env QC/server/index.mjs",
+    "qc:db:generate": "prisma generate --schema QC/server/prisma/schema.prisma",
+    "qc:db:migrate": "node --env-file-if-exists=QC/server/.env node_modules/prisma/build/index.js migrate deploy --schema QC/server/prisma/schema.prisma",
+    "qc:test": "node --env-file-if-exists=QC/server/.env --test QC/server/test/",
+    "qc:seed:dev": "node --env-file-if-exists=QC/server/.env QC/server/scripts/seed-dev.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
