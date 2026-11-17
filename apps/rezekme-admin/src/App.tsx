@@ -27,6 +27,8 @@ const Pricing = page(() => import('@platform/modules/sr/AdminPricingPage'), 'Adm
 const Hosts = page(() => import('@platform/modules/admin/AdminHostsPage'), 'AdminHostsPage')
 const StayPricing = page(() => import('@platform/modules/admin/AdminStayPricingPage'), 'AdminStayPricingPage')
 const Business = page(() => import('@platform/modules/sr/AdminBusinessAccountsPage'), 'AdminBusinessAccountsPage')
+const Crm = page(() => import('@platform/modules/admin/AdminCrmPage'), 'AdminCrmPage')
+const Ceo = page(() => import('@platform/modules/admin/AdminCeoPage'), 'AdminCeoPage')
 
 type Item = { path: string; ar: string; en: string; fr: string; Page: ComponentType<PageProps> }
 const ITEMS: Item[] = [
@@ -41,6 +43,8 @@ const ITEMS: Item[] = [
   { path: '/admin/money', ar: 'الصرف والاسترداد', en: 'Payouts & refunds', fr: 'Versements', Page: Money },
   { path: '/admin/sr/incidents', ar: 'الحوادث', en: 'Incidents', fr: 'Incidents', Page: Incidents },
   { path: '/admin/customers', ar: 'العملاء', en: 'Customers', fr: 'Clients', Page: Customers },
+  { path: '/admin/crm', ar: 'إدارة العلاقات', en: 'CRM', fr: 'CRM', Page: Crm },
+  { path: '/admin/ceo', ar: 'مستشار القيادة', en: 'CEO advisor', fr: 'Conseiller CEO', Page: Ceo },
   { path: '/admin/sr/pricing', ar: 'أسعار الرحلات', en: 'Ride pricing', fr: 'Tarifs courses', Page: Pricing },
   { path: '/admin/sr/promo-codes', ar: 'أكواد الخصم', en: 'Promo codes', fr: 'Codes promo', Page: Promo },
   { path: '/admin/sr/business-accounts', ar: 'حسابات الأعمال', en: 'Business accounts', fr: 'Comptes entreprise', Page: Business },

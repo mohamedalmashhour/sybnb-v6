@@ -5096,3 +5096,119 @@ export async function saveStayPricingAdmin(input: { config: StayPricingConfig; r
 export async function fetchStayPricingInfo() {
   return apiRequest<{ ok: true; weekendNights: number[]; seasons: StaySeason[]; limits: StayPricingLimits }>('/api/stays/pricing-info')
 }
+
+// ---------------------------------------------------------------------------------------------------
+// CRM + CEO advisor (migration 084). ADMIN-gated, money-free. All calls go through runAdminRequest
+// (ADMIN staff token). Nothing here moves money or sends: the CEO actions only write a CRM task or a
+// campaign DRAFT.
+// ---------------------------------------------------------------------------------------------------
+
+export type CrmContactKind = 'LEAD' | 'GUEST' | 'HOST' | 'DRIVER' | 'SELLER' | 'MERCHANT' | 'BUSINESS'
+export type CrmContactStage = 'NEW' | 'ACTIVE' | 'DORMANT' | 'CHURNED'
+export type CrmActivityKind = 'NOTE' | 'TASK' | 'FOLLOW_UP' | 'CAMPAIGN_DRAFT'
+export type CrmActivityStatus = 'OPEN' | 'DONE' | 'CANCELLED'
+
+export type CrmContact = {
+  id: string
+  userId: string | null
+  kind: CrmContactKind
+  stage: CrmContactStage
+  displayName: string
+  email: string | null
+  phone: string | null
+  marketingOptInAt: string | null
+  regionKey: string | null
+  notes: string | null
+  createdById: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type CrmActivity = {
+  id: string
+  contactId: string
+  kind: CrmActivityKind
+  status: CrmActivityStatus
+  title: string
+  body: string | null
+  source: string | null
+  dueAt: string | null
+  createdById: string | null
+  createdAt: string
+  completedAt: string | null
+}
+
+export async function fetchCrmContacts(filter: { stage?: CrmContactStage; kind?: CrmContactKind; q?: string } = {}) {
+  const params = new URLSearchParams()
+  if (filter.stage) params.set('stage', filter.stage)
+  if (filter.kind) params.set('kind', filter.kind)
+  if (filter.q && filter.q.trim()) params.set('q', filter.q.trim())
+  const qs = params.toString()
+  const response = await runAdminRequest((token) =>
+    apiRequest<{ ok: true; contacts: CrmContact[] }>(`/api/admin/crm/contacts${qs ? `?${qs}` : ''}`, { token }),
+  )
+  return response.contacts || []
+}
+
+export async function createCrmContact(input: { displayName: string; kind?: CrmContactKind; stage?: CrmContactStage; email?: string; phone?: string; regionKey?: string; notes?: string; userId?: string }) {
+  const response = await runAdminRequest((token) =>
+    apiRequest<{ ok: true; contact: CrmContact }>('/api/admin/crm/contacts', { method: 'POST', token, body: input }),
+  )
+  return response.contact
+}
+
+export async function fetchCrmContact(id: string) {
+  const response = await runAdminRequest((token) =>
+    apiRequest<{ ok: true; contact: CrmContact & { activities: CrmActivity[] } }>(`/api/admin/crm/contacts/${encodeURIComponent(id)}`, { token }),
+  )
+  return response.contact
+}
+
+export async function addCrmActivity(contactId: string, input: { title: string; kind?: CrmActivityKind; body?: string; source?: string; dueAt?: string }) {
+  const response = await runAdminRequest((token) =>
+    apiRequest<{ ok: true; activity: CrmActivity }>(`/api/admin/crm/contacts/${encodeURIComponent(contactId)}/activities`, { method: 'POST', token, body: input }),
+  )
+  return response.activity
+}
+
+export async function setCrmActivityStatus(activityId: string, status: CrmActivityStatus) {
+  const response = await runAdminRequest((token) =>
+    apiRequest<{ ok: true; activity: CrmActivity }>(`/api/admin/crm/activities/${encodeURIComponent(activityId)}/status`, { method: 'POST', token, body: { status } }),
+  )
+  return response.activity
+}
+
+export type CeoSnapshot = {
+  generatedAt: string
+  windowDays: number
+  activeListings: number
+  submittedListings: number
+  approvedListings: number
+  activeDrivers: number
+  openRideDemand: number
+  dormantHosts: number
+  marketingConsentedNoRecentCampaign: number
+  regionKey: string | null
+}
+
+export type CeoAdvisory = {
+  key: string
+  severity: 'info' | 'watch' | 'act'
+  title: string
+  detail: string
+  recommendedAction: 'queue_crm_task' | 'draft_campaign' | null
+  actionArgs: Record<string, unknown> | null
+}
+
+export async function fetchCeoAdvisories() {
+  return runAdminRequest((token) =>
+    apiRequest<{ ok: true; snapshot: CeoSnapshot; advisories: CeoAdvisory[] }>('/api/admin/ceo/advisories', { token }),
+  )
+}
+
+export async function runCeoAction(input: { action: 'queue_crm_task' | 'draft_campaign'; contactId: string; ruleKey?: string; title?: string; detail?: string }) {
+  const response = await runAdminRequest((token) =>
+    apiRequest<{ ok: true; action: string; activity: CrmActivity }>('/api/admin/ceo/actions', { method: 'POST', token, body: input }),
+  )
+  return response.activity
+}
