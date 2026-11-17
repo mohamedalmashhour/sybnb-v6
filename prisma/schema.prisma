@@ -208,6 +208,8 @@ model User {
   updatedAt    DateTime @db.Timestamptz(6)      @default(now()) @updatedAt @map("updated_at")
 
   roles             UserRole[]
+  crmContacts       CrmContact[]      @relation("CrmContactUser")
+  crmActivitiesMade CrmActivity[]     @relation("CrmActivityAuthor")
   roleAssignments   RoleAssignment[]  @relation("UserRoleAssignments")
   suspensions       UserSuspension[]
   sessions          UserSession[]
@@ -3328,4 +3330,92 @@ model SecurityBootstrap {
 
   @@index([completedById])
   @@map("security_bootstrap")
+}
+
+// ---------------------------------------------------------------------------------------------------
+// CRM + CEO advisor (migration 084). ADDITIVE, money-free. Mirrors the Joblop CRM/CEO design on the
+// Rezekme (sybnb-v6) backend. Nothing here moves money, charges, pays, refunds or sends on its own:
+// the CEO actions only queue a staff CRM task or record a campaign DRAFT; sending stays a human step.
+// Marketing consent is NEVER inferred from these rows — marketingOptInAt is a display-only cached
+// mirror; the live LegalConsent record is the source of truth and must be re-read before any send.
+// ---------------------------------------------------------------------------------------------------
+
+enum CrmContactKind {
+  LEAD
+  GUEST
+  HOST
+  DRIVER
+  SELLER
+  MERCHANT
+  BUSINESS
+}
+
+enum CrmContactStage {
+  NEW
+  ACTIVE
+  DORMANT
+  CHURNED
+}
+
+enum CrmActivityKind {
+  NOTE
+  TASK
+  FOLLOW_UP
+  CAMPAIGN_DRAFT
+}
+
+enum CrmActivityStatus {
+  OPEN
+  DONE
+  CANCELLED
+}
+
+// A person or organization the ops/growth team is tracking. Optionally linked to a platform User.
+model CrmContact {
+  id             String          @db.Uuid @id @default(dbgenerated("gen_random_uuid()"))
+  userId         String?         @db.Uuid @map("user_id")
+  kind           CrmContactKind  @default(LEAD)
+  stage          CrmContactStage @default(NEW)
+  displayName    String          @map("display_name")
+  email          String?
+  phone          String?
+  // Display-only cached mirror of LegalConsent marketing opt-in. NOT a consent source of truth.
+  marketingOptInAt DateTime?     @db.Timestamptz(6) @map("marketing_opt_in_at")
+  regionKey      String?         @map("region_key")
+  notes          String?
+  createdById    String?         @db.Uuid @map("created_by_id")
+  createdAt      DateTime        @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt      DateTime        @db.Timestamptz(6) @default(now()) @updatedAt @map("updated_at")
+
+  user           User?           @relation("CrmContactUser", fields: [userId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  activities     CrmActivity[]
+
+  @@index([stage, updatedAt])
+  @@index([kind, stage])
+  @@index([userId])
+  @@map("crm_contacts")
+}
+
+// A note, task, follow-up or campaign draft against a contact. Money-free.
+model CrmActivity {
+  id            String            @db.Uuid @id @default(dbgenerated("gen_random_uuid()"))
+  contactId     String            @db.Uuid @map("contact_id")
+  kind          CrmActivityKind   @default(TASK)
+  status        CrmActivityStatus @default(OPEN)
+  title         String
+  body          String?
+  // Free-form origin tag, e.g. "ceo:ceo_employer_churn" when the CEO advisor queued the task.
+  source        String?
+  dueAt         DateTime?         @db.Timestamptz(6) @map("due_at")
+  createdById   String?           @db.Uuid @map("created_by_id")
+  createdAt     DateTime          @db.Timestamptz(6) @default(now()) @map("created_at")
+  completedAt   DateTime?         @db.Timestamptz(6) @map("completed_at")
+
+  contact       CrmContact        @relation(fields: [contactId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  createdBy     User?             @relation("CrmActivityAuthor", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+
+  @@index([contactId, createdAt])
+  @@index([status, dueAt])
+  @@index([source])
+  @@map("crm_activities")
 }
