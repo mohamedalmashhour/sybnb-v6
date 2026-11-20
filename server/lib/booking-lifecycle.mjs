@@ -3,8 +3,10 @@ import { log } from './logger.mjs'
 import { bookingPolicySettings } from './country.mjs'
 import { expiredUnpaidBookingWhere } from './booking-policy.mjs'
 import { notifyBooking } from './notifications.mjs'
+import { capsuleProfile } from './capsule-profile.mjs'
 
-export const PAYOUT_HOLD_DAYS = 14
+// Host payout hold after check-out, from the active country's capsule profile (Syria: 14 days).
+export const PAYOUT_HOLD_DAYS = capsuleProfile()?.stays.payoutHoldDays ?? 14
 
 // A confirmed stay has no natural "it's over" signal in this system (no cleaning-crew check-out
 // scan, no guest confirmation step) — checkout date passing is the only real signal available.

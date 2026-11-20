@@ -1,3 +1,4 @@
+import { capsuleProfile } from './capsule-profile.mjs'
 // SYBNB — pure booking money policy (owner decisions of 2026-10-08, see MONEY_SPEC decisions 3-6).
 //
 // PURE MODULE: no Prisma, no I/O, no process.env reads except through the explicit `env` argument of
@@ -19,7 +20,8 @@
 // Contractual STR (STAYS) platform commission of the WHOLE amount paid excluding the protection
 // fee (rent + cleaning + taxes + other fees). Owner decision 2026-10-09: raised from 12% to 15%
 // to match the short-term-rental market leaders (Airbnb/Booking.com host-only ~15%).
-export const STR_COMMISSION_RATE = 0.15
+// Value now comes from the active country's capsule profile (Syria: 1500 bp = 15%).
+export const STR_COMMISSION_RATE = (capsuleProfile()?.stays.hostCommissionBp ?? 1500) / 10_000
 // SR Ride platform commission -- owner decision 2026-10-09 (revised): match the SYRIAN ride-hailing
 // market rather than Uber. Syria's own apps (Zakinn, Wassilni, SyriaGo, YallaGo, per Enab Baladi
 // 2025) take 12-15% per trip, some up to 20% -- NOT Uber's 25%. Default set to 15% so the driver
@@ -30,7 +32,8 @@ export const STR_COMMISSION_RATE = 0.15
 // covers payment-processor (Stripe) fees, which the platform absorbs; the driver always keeps 80%.
 export const SR_RIDE_COMMISSION_RATE = (() => {
   const raw = Number(process.env.SR_RIDE_COMMISSION_RATE)
-  return Number.isFinite(raw) && raw >= 0 && raw < 1 ? raw : 0.20
+  // Env override first, then the active country's capsule profile (Syria: 2000 bp = 20%).
+  return Number.isFinite(raw) && raw >= 0 && raw < 1 ? raw : (capsuleProfile()?.rides.driverCommissionBp ?? 2000) / 10_000
 })()
 // Cancellation protection add-on: 3% of the FULL stay amount (all nights, before cleaning/taxes).
 export const PROTECTION_RATE = 0.03

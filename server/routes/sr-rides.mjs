@@ -13,6 +13,7 @@ import { resolveTrafficDistance } from '../lib/traffic-distance.mjs'
 import { signDriverPhotoUrl } from '../lib/driver-photo-storage.mjs'
 import { getDriverRatingSummary } from '../lib/driver-rating.mjs'
 import { getDriverLocation, getRideCoords, etaMinutesBetween, haversineKm } from '../lib/live-map.mjs'
+import { capsuleProfile } from '../lib/capsule-profile.mjs'
 import { waitState, noShowFeeMinor, withMinCancellationFee } from '../lib/ride-wait.mjs'
 import { countOffences, isOffenceBlocked, riderOffenceFeeMinor, restrictedError, offenceFeeMinor, offenceBlockThreshold, offenceWindowMs } from '../lib/ride-offences.mjs'
 import { signRideShareToken, verifyRideShareToken } from '../lib/ride-share.mjs'
@@ -81,11 +82,12 @@ const SR_MAX_DRIVER_BONUS_MINOR = (() => {
 // assignment; after that, or once the driver is en route, the fee applies.
 const RIDE_CANCELLATION_FEE_PERCENT = (() => {
   const raw = Number(process.env.RIDE_CANCELLATION_FEE_PERCENT)
-  return Number.isFinite(raw) && raw >= 0 && raw <= 100 ? raw : 15
+  // Env override first, then the active country's capsule profile (Syria: 15%).
+  return Number.isFinite(raw) && raw >= 0 && raw <= 100 ? raw : (capsuleProfile()?.rides.cancellation.feePercent ?? 15)
 })()
 const RIDE_CANCEL_GRACE_MS = (() => {
   const raw = Number(process.env.RIDE_CANCEL_GRACE_SECONDS)
-  return (Number.isFinite(raw) && raw >= 0 ? raw : 120) * 1000
+  return (Number.isFinite(raw) && raw >= 0 ? raw : (capsuleProfile()?.rides.cancellation.graceSeconds ?? 120)) * 1000
 })()
 
 // Switch an unclaimed, unprepaid, promo-free ride to another category: re-quote with the same engine,
