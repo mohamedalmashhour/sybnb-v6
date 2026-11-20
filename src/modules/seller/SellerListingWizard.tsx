@@ -7,7 +7,7 @@ import { BrandLogo, BRAND_NAME, STAYS_ONLY } from '../../shared/brand'
 import { acceptListingAgreement, createAndSubmitPrototypeListing, fetchStayPricingInfo, createListingAuction, fetchMyIdDocumentStatus, getStoredSellerSession, submitHostIdDocument, uploadPaymentProofFile, type IdDocumentStatus } from '../../shared/api/platformApi'
 import type { CSSVars } from '../../shared/theme/cssVars'
 import { sellerCarFilterGroups, sellerMarketFilterGroups, sellerPropertyFilterGroups, sellerRealEstateFilterGroups, type VisualFilterSelection } from '../../engines/filters'
-import { getCity, getGovernorate, labelFor, SYRIA_GOVERNORATES } from '../../engines/search'
+import { getCity, getGovernorate, labelFor, COUNTRY_REGIONS } from '../../engines/search'
 import { selectedFilterLabels, VisualFilterPanel } from '../../shared/filters/VisualFilterPanel'
 import { PaymentProofUpload } from '../payments/PaymentProofUpload'
 import { ListingPhotoManager, ListingPreviewCard, type WizardPhoto } from './ListingPhotoManager'
@@ -746,7 +746,7 @@ export function SellerListingWizard({ lang }: Props) {
                 <div className="seller-location-group">
                   <span>{pick(lang, 'المحافظة', 'Governorate', 'Gouvernorat')}</span>
                   <div className="seller-location-options">
-                    {SYRIA_GOVERNORATES.map((item) => (
+                    {COUNTRY_REGIONS.map((item) => (
                       <button className={item.key === governorate ? 'active' : ''} key={item.key} onClick={() => chooseGovernorate(item.key)}>
                         {labelFor(lang, item)}
                       </button>

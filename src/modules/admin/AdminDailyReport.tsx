@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { pick, type Lang } from '../../engines/language/languageEngine'
 import { moneyText } from '../../shared/i18n/display'
 import { fetchAdminDailyReport, type AdminDailyReport } from '../../shared/api/platformApi'
+import { countryOperatingTimeZone } from '../../shared/country/presentation'
 
 const C = {
   panel: 'linear-gradient(180deg,#111b2e,#0c1322)',
@@ -22,7 +23,8 @@ function localTz(): string {
 function todayIn(tz: string): string {
   try { return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()) } catch { return new Date().toISOString().slice(0, 10) }
 }
-const TZ_CHOICES = ['America/Toronto', 'Asia/Damascus', 'UTC']
+// The operator's office zone, the active country's market zone, and UTC.
+const TZ_CHOICES = [...new Set(['America/Toronto', countryOperatingTimeZone(), 'UTC'])]
 
 export function AdminDailyReport({ lang }: { lang: Lang }) {
   const [tz, setTz] = useState<string>(() => { const l = localTz(); return TZ_CHOICES.includes(l) ? l : TZ_CHOICES[0] })

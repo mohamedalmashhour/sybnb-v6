@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { Lang } from '../../engines/language/languageEngine'
-import { getCity, getGovernorate, labelFor, SYRIA_GOVERNORATES } from '../../engines/search'
+import { getCity, getGovernorate, labelFor, COUNTRY_REGIONS } from '../../engines/search'
 import { countryPhrase } from '../../shared/country/presentation'
 
 export type LocationValue = {
@@ -128,7 +128,7 @@ export function LocationCascade({ lang, value, onChange, onClear, open, onOpenCh
                     {t.allSyria}
                   </ChoiceButton>
                 ) : null}
-                {SYRIA_GOVERNORATES.map((item) => (
+                {COUNTRY_REGIONS.map((item) => (
                   <ChoiceButton key={item.key} active={item.key === value.governorate} onClick={() => selectGovernorate(item.key)}>
                     {displayLabel(item)}
                   </ChoiceButton>

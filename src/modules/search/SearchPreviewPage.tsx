@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { pick, type Lang } from '../../engines/language/languageEngine'
-import { getCity, getGovernorate, GOVERNORATE_CITY_NAME, governorateCityName, labelFor, listingMatchesKeyword, SYRIA_GOVERNORATES } from '../../engines/search'
+import { getCity, getGovernorate, GOVERNORATE_CITY_NAME, governorateCityName, labelFor, listingMatchesKeyword, COUNTRY_REGIONS } from '../../engines/search'
 import { addFavourite, createSavedSearch, fetchApprovedListings, fetchFavouriteIds, isSampleListing, removeFavourite, type PlatformListing } from '../../shared/api/platformApi'
 import { FavouriteButton } from '../listings/FavouriteButton'
 import { PropertyMap } from '../../shared/maps/PropertyMap'
@@ -626,7 +626,7 @@ function placeLine(listing: PlatformListing, lang: Lang) {
   const govKey = Object.keys(GOVERNORATE_CITY_NAME).find(
     (key) => GOVERNORATE_CITY_NAME[key].toLowerCase() === (cityEn || governorateRaw).toLowerCase(),
   )
-  const governorate = SYRIA_GOVERNORATES.find(
+  const governorate = COUNTRY_REGIONS.find(
     (item) => item.key === govKey || item.ar === governorateRaw || item.en.toLowerCase() === governorateRaw.toLowerCase(),
   )
   let parts: string[]

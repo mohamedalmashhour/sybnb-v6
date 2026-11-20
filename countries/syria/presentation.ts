@@ -16,6 +16,7 @@ export const syriaPresentation: CountryPresentationProfile = {
   displayCurrencies: ['SYP', 'USD'], // already public (Fee Schedule); no CAD
   timeZone: 'UTC',          // dates are formatted in UTC across the app
   defaultCurrency: 'SYP',
+  operatingTimeZone: 'Asia/Damascus',
   countryName: { ar: 'سوريا', en: 'Syria', fr: 'Syrie' },
   allCountry: { ar: 'كل سوريا', en: 'All of Syria', fr: 'Toute la Syrie' },
   inCountry: { ar: 'داخل سوريا', en: 'in Syria', fr: 'partout en Syrie' },

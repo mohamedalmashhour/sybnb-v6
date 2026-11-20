@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { Lang } from '../../engines/language/languageEngine'
 import { pick } from '../../engines/language/languageEngine'
-import { SYRIA_GOVERNORATES } from '../../engines/search'
+import { COUNTRY_REGIONS } from '../../engines/search'
 import { navigate } from '../../app/routes'
 import { countryPhrase } from '../../shared/country/presentation'
 
@@ -97,7 +97,7 @@ export function HeroSearch({ lang }: { lang: Lang }) {
           <span style={styles.label}>{pick(lang, 'أين؟', 'Where?', 'Où ?')}</span>
           <select style={styles.select} value={governorate} onChange={(event) => setGovernorate(event.target.value)}>
             <option value="">{countryPhrase('allCountry', lang)}</option>
-            {SYRIA_GOVERNORATES.map((gov) => (
+            {COUNTRY_REGIONS.map((gov) => (
               <option key={gov.key} value={gov.key}>
                 {governorateName(lang, gov)}
               </option>

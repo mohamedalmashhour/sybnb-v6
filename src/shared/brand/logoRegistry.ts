@@ -1,3 +1,4 @@
+import { BRAND_NAME } from './brandName'
 export type LogoKey =
   | 'platform'
   | 'archMonogram'
@@ -23,19 +24,19 @@ export const LOGO_ASSETS: Record<LogoKey, LogoAsset> = {
   platform: {
     key: 'platform',
     src: '/assets/logos/sybnb-platform.png',
-    label: 'SYBNB Platform',
+    label: `${BRAND_NAME} Platform`,
     usage: 'Main platform navigation and landing.',
   },
   archMonogram: {
     key: 'archMonogram',
     src: '/assets/logos/sybnb-arch-monogram.png',
-    label: 'SYBNB Arch Monogram',
+    label: `${BRAND_NAME} Arch Monogram`,
     usage: 'Square app mark, splash, favicon candidate.',
   },
   gridArabic: {
     key: 'gridArabic',
     src: '/assets/logos/sybnb-grid-arabic.png',
-    label: 'SYBNB Grid Arabic',
+    label: `${BRAND_NAME} Grid Arabic`,
     usage: 'Arabic-first marketing lockup.',
   },
   stays: {
@@ -47,43 +48,43 @@ export const LOGO_ASSETS: Record<LogoKey, LogoAsset> = {
   property: {
     key: 'property',
     src: '/assets/logos/sybnb-property.png',
-    label: 'SYBNB Property',
+    label: `${BRAND_NAME} Property`,
     usage: 'Property, buy, rentals, and new construction.',
   },
   cars: {
     key: 'cars',
     src: '/assets/logos/sybnb-cars.png',
-    label: 'SYBNB Cars',
+    label: `${BRAND_NAME} Cars`,
     usage: 'Cars marketplace division.',
   },
   marketplace: {
     key: 'marketplace',
     src: '/assets/logos/sybnb-marketplace.png',
-    label: 'SYBNB Marketplace',
+    label: `${BRAND_NAME} Marketplace`,
     usage: 'General marketplace division.',
   },
   wallet: {
     key: 'wallet',
     src: '/assets/logos/sybnb-wallet.png',
-    label: 'SYBNB Wallet',
+    label: `${BRAND_NAME} Wallet`,
     usage: 'Wallet, prepaid credit, and gift credit flows.',
   },
   finance: {
     key: 'finance',
     src: '/assets/logos/sybnb-finance.png',
-    label: 'SYBNB Finance',
+    label: `${BRAND_NAME} Finance`,
     usage: 'Finance, proof review, and payment admin flows.',
   },
   plus: {
     key: 'plus',
     src: '/assets/logos/sybnb-plus.png',
-    label: 'SYBNB Plus',
+    label: `${BRAND_NAME} Plus`,
     usage: 'Plus plan and premium account surfaces.',
   },
   aiBrain: {
     key: 'aiBrain',
     src: '/assets/logos/sybnb-ai-brain.png',
-    label: 'SYBNB AI Brain',
+    label: `${BRAND_NAME} AI Brain`,
     usage: 'AI Brain autonomous manager and owner dashboards.',
   },
   srRide: {

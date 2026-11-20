@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { pick, text, type Lang } from '../../engines/language/languageEngine'
 import { renterPropertyFilterGroups, type VisualFilterSelection } from '../../engines/filters'
-import { getCity, getGovernorate, governorateCityName, labelFor, SYRIA_GOVERNORATES } from '../../engines/search'
+import { getCity, getGovernorate, governorateCityName, labelFor, COUNTRY_REGIONS } from '../../engines/search'
 import { selectedFilterLabels, VisualFilterPanel } from '../../shared/filters/VisualFilterPanel'
 import { addFavourite, createSavedSearch, fetchApprovedListings, fetchFavouriteIds, getStoredGuestSession, removeFavourite, sendListingInquiryMessage, uploadPaymentProofFile, type PlatformListing } from '../../shared/api/platformApi'
 import { FavouriteButton } from '../listings/FavouriteButton'
@@ -529,7 +529,7 @@ export function RentalsPage({ lang, mode = 'rentals' }: Props) {
   const selectedMainGroupOption = mainGroupOptions.find((option) => option.id === visualFilters.propertyType)
   const currentPanelOptions = (
     activeSearchPanel === 'governorate'
-      ? [{ key: ALL_SYRIA_KEY, label: countryPhrase('allCountry', lang) }, ...SYRIA_GOVERNORATES.map((item) => ({ key: item.key, label: labelFor(lang, item) }))]
+      ? [{ key: ALL_SYRIA_KEY, label: countryPhrase('allCountry', lang) }, ...COUNTRY_REGIONS.map((item) => ({ key: item.key, label: labelFor(lang, item) }))]
       : activeSearchPanel === 'city'
         ? (selectedGovernorateData?.cities || []).map((item) => ({ key: item.key, label: labelFor(lang, item) }))
         : (selectedCityData?.areas || []).map((item) => ({ key: item.key, label: labelFor(lang, item) }))

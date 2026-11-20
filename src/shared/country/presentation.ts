@@ -21,6 +21,8 @@ export type CountryPresentationProfile = {
   inCountry: { ar: string; en: string; fr: string }
   // Example/default places shown in the ride booking form.
   rideDefaults: { pickup: { ar: string; en: string; fr: string }; dropoff: { ar: string; en: string; fr: string } }
+  // IANA zone the market operates in (reports, local day boundaries). timeZone above is display formatting.
+  operatingTimeZone: string
   // Main currency shown by default (one of displayCurrencies).
   defaultCurrency: string
   // Map defaults for this country: where maps open and how far zoomed when there is no point yet.
@@ -36,7 +38,7 @@ const PRESENTATIONS: Record<string, CountryPresentationProfile> = {
 }
 
 const REQUIRED_FIELDS: (keyof CountryPresentationProfile)[] = [
-  'countryCode', 'locale', 'fallbackLocale', 'phoneCallingCode', 'phonePlaceholder', 'supportedLanguages', 'displayCurrencies', 'timeZone', 'defaultCurrency', 'map', 'countryName', 'allCountry', 'inCountry', 'rideDefaults',
+  'countryCode', 'locale', 'fallbackLocale', 'phoneCallingCode', 'phonePlaceholder', 'supportedLanguages', 'displayCurrencies', 'timeZone', 'defaultCurrency', 'map', 'countryName', 'allCountry', 'inCountry', 'rideDefaults', 'operatingTimeZone',
 ]
 
 function assertComplete(p: CountryPresentationProfile, key: string): CountryPresentationProfile {
@@ -112,6 +114,10 @@ export function countryPhrase(which: 'allCountry' | 'inCountry', lang: string | 
 export function rideDefaultPlace(which: 'pickup' | 'dropoff', lang: string | undefined): string {
   const d = activeCountryPresentation().rideDefaults[which]
   return lang === 'ar' ? d.ar : lang === 'fr' ? d.fr : d.en
+}
+
+export function countryOperatingTimeZone(): string {
+  return activeCountryPresentation().operatingTimeZone
 }
 
 export function phoneCallingCode(): string {

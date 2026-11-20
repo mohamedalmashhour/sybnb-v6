@@ -31,7 +31,7 @@ const FIELDS: Field[] = [
   { group: 'multipliers', key: 'fuelSurchargePercent', ar: 'زيادة وقود فورية', en: 'Instant fuel surcharge', unit: '%' },
   { group: 'fees', key: 'safetyFeePerTripUsd', ar: 'رسوم السلامة لكل رحلة', en: 'Safety fee per trip', unit: '$', step: 0.05 },
   { group: 'fees', key: 'liveTrackingUsd', ar: 'التتبع المباشر', en: 'Live tracking', unit: '$', step: 0.05 },
-  { group: 'fees', key: 'ringFeeUsd', ar: 'رسوم كل حلقة حول دمشق', en: 'Fee per Damascus ring', unit: '$', step: 0.05 },
+  { group: 'fees', key: 'ringFeeUsd', ar: 'رسوم كل حلقة حول مركز المدينة', en: 'Fee per ring around the city centre', unit: '$', step: 0.05 },
   { group: 'fees', key: 'ringWidthKm', ar: 'عرض الحلقة', en: 'Ring width', unit: 'km', step: 0.5 },
   { group: 'fees', key: 'ringCount', ar: 'عدد الحلقات', en: 'Number of rings', unit: '' },
   { group: 'fees', key: 'airportBaseUsd', ar: 'سعر المطار (اقتصادي من المركز)', en: 'Airport price (Economy from centre)', unit: '$' },
