@@ -10,6 +10,7 @@
 import { profile as syria } from '../../countries/syria/profile.mjs'
 import { profile as canada } from '../../countries/canada/profile.mjs'
 import { resolveBookingPolicy } from './booking-policy.mjs'
+import { capsuleProfile } from './capsule-profile.mjs'
 
 // Registry of supported country profiles. Live Rezekme runs SYBNB_COUNTRY=syria; canada is
 // registered with every gate closed.
@@ -110,7 +111,16 @@ export function channelEnabled(channel, env = process.env) {
 // server/lib/booking-policy.mjs. Neutral defaults apply when no profile is loaded.
 export function bookingPolicySettings(env = process.env) {
   const { profile } = loadCountryProfile(env)
-  return resolveBookingPolicy(profile?.bookingPolicy || {}, env)
+  // A country with no explicit unpaid-expiry window uses its capsule payment hold
+  // (stays.holdMinutes: Canada 30 min). Syria sets bookingPolicy.unpaidExpiryHours (48 h) itself.
+  const policy = { ...(profile?.bookingPolicy || {}) }
+  const hold = capsuleProfile(env)?.stays?.holdMinutes
+  if (policy.unpaidExpiryHours == null && Number.isFinite(hold) && hold > 0) policy.unpaidExpiryHours = hold / 60
+  const resolved = resolveBookingPolicy(policy, env)
+  // A country without a fixed UTC offset (daylight saving, e.g. Québec) uses its IANA time zone for
+  // "check-in day 00:00". Syria keeps its fixed +3 offset, so its results are unchanged.
+  if (profile?.bookingPolicy?.timezoneOffsetMinutes == null && capsuleProfile(env)?.timezone) resolved.timezone = capsuleProfile(env).timezone
+  return resolved
 }
 
 // The active country's host payout methods: { TYPE: { required: [field, ...] } }. Empty (no method

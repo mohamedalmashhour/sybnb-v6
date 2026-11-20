@@ -1,4 +1,5 @@
 import { assertListingPrice, assertListingText, clampPlaceText } from '../lib/listing-input.mjs'
+import { capsuleProfile } from '../lib/capsule-profile.mjs'
 import { publicListingMedia } from '../lib/listing-media-url.mjs'
 import { gridFilterCondition } from '../lib/grid-filter.mjs'
 import { db } from '../lib/prisma.mjs'
@@ -951,6 +952,19 @@ export async function handleListings(req, res, url, context) {
         const error = new Error('Add how you want to be paid (Sham Cash or bank account) before sending your stay for review.')
         error.statusCode = 403
         error.code = 'PAYOUT_METHOD_REQUIRED'
+        error.expose = true
+        throw error
+      }
+    }
+    // Country rule (one base, 2026-11-20): some countries require a short-term-rental registration
+    // number on every stay (Québec CITQ, Saudi Ministry of Tourism permit, Dubai DTCM). Read from the
+    // active country's capsule settings; Syria does not require one.
+    if (existing.division === 'STAYS' && existing.metadata?.advertising !== true && capsuleProfile()?.stays.requireRegistrationNumber) {
+      const reg = String(existing.metadata?.registrationNumber || '').trim()
+      if (!reg) {
+        const error = new Error('Add the short-term rental registration number for this place before sending it for review.')
+        error.statusCode = 400
+        error.code = 'REGISTRATION_NUMBER_REQUIRED'
         error.expose = true
         throw error
       }

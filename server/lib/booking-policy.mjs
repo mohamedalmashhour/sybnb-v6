@@ -1,5 +1,6 @@
 import { capsuleProfile } from './capsule-profile.mjs'
 import { quoteStay, cancellationRefund } from '../../wrapping/stays/index.mjs'
+import { localMidnight } from '../../wrapping/core/dates.mjs'
 // SYBNB — pure booking money policy (owner decisions of 2026-10-08, see MONEY_SPEC decisions 3-6).
 //
 // PURE MODULE: no Prisma, no I/O, no process.env reads except through the explicit `env` argument of
@@ -156,6 +157,8 @@ export function checkInStartMs(checkIn, policy = DEFAULT_BOOKING_POLICY) {
   const d = new Date(checkIn)
   if (Number.isNaN(d.getTime())) return null
   const midnightUtc = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  // IANA zone when the country has one instead of a fixed offset (handles daylight saving).
+  if (policy.timezone) return localMidnight(new Date(midnightUtc), policy.timezone).getTime()
   return midnightUtc - Number(policy.timezoneOffsetMinutes || 0) * 60 * 1000
 }
 
