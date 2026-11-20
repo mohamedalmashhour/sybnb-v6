@@ -8,6 +8,7 @@ import {
   type PlatformWalletGift,
 } from '../../shared/api/platformApi'
 import { moneyText, statusText } from '../../shared/i18n/display'
+import { defaultDisplayCurrency } from '../../shared/country/presentation'
 
 type Props = {
   lang: Lang
@@ -187,7 +188,7 @@ export function WalletPage({ lang }: Props) {
       const result = await createPrototypeWalletGift({
         recipientPhone,
         amountMinor: Math.max(0, Math.round(Number(amountMinor) || 0)),
-        currency: 'SYP',
+        currency: defaultDisplayCurrency(),
         message,
       })
       setGift(result.gift)
@@ -222,11 +223,11 @@ export function WalletPage({ lang }: Props) {
         <div style={styles.balanceColumns}>
           <article>
             <span>{t.available} / Available Balance</span>
-            <strong style={styles.availableValue} dir={isAr ? 'rtl' : 'ltr'}>{moneyText(availableMinor, wallet?.currency || 'SYP', lang)}</strong>
+            <strong style={styles.availableValue} dir={isAr ? 'rtl' : 'ltr'}>{moneyText(availableMinor, wallet?.currency || defaultDisplayCurrency(), lang)}</strong>
           </article>
           <article>
             <span>{t.protectedFundsShort} / Protected Funds</span>
-            <strong style={styles.protectedValue} dir={isAr ? 'rtl' : 'ltr'}>{moneyText(heldMinor, wallet?.currency || 'SYP', lang)}</strong>
+            <strong style={styles.protectedValue} dir={isAr ? 'rtl' : 'ltr'}>{moneyText(heldMinor, wallet?.currency || defaultDisplayCurrency(), lang)}</strong>
           </article>
         </div>
         <div style={styles.statusPills}>
@@ -248,7 +249,7 @@ export function WalletPage({ lang }: Props) {
           <article key={String(label)} style={{ ...styles.statCard, borderColor: `${color}55` }}>
             <span style={styles.statDot}>{String(label)}</span>
             <strong style={{ color: String(color) }} dir={isAr ? 'rtl' : 'ltr'}>
-              {moneyText(Number(value), wallet?.currency || 'SYP', lang)}
+              {moneyText(Number(value), wallet?.currency || defaultDisplayCurrency(), lang)}
             </strong>
           </article>
         ))}
@@ -354,7 +355,7 @@ export function WalletPage({ lang }: Props) {
                 <div key={String(entry.id || index)} style={styles.entry}>
                   <strong>{statusText(String(entry.type || '-'), lang)}</strong>
                   <span dir={isAr ? 'rtl' : 'ltr'}>
-                    {moneyText(Number(entry.amountMinor || entry.amount || 0), String(entry.currency || 'SYP'), lang)}
+                    {moneyText(Number(entry.amountMinor || entry.amount || 0), String(entry.currency || defaultDisplayCurrency()), lang)}
                   </span>
                 </div>
               ))}

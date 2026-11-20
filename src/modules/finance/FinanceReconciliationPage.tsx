@@ -16,6 +16,7 @@ import {
   type PlatformReviewQueue,
 } from '../../shared/api/platformApi'
 import { moneyText, providerText, statusText } from '../../shared/i18n/display'
+import { defaultDisplayCurrency } from '../../shared/country/presentation'
 
 type Props = {
   lang: Lang
@@ -261,10 +262,10 @@ export function FinanceReconciliationPage({ lang }: Props) {
       )}
 
       <section style={styles.stats}>
-        <FinanceStat label={t.protectedFunds} value={moneyText(protectedMinor, 'SYP', lang)} tone="#20d29b" />
+        <FinanceStat label={t.protectedFunds} value={moneyText(protectedMinor, defaultDisplayCurrency(), lang)} tone="#20d29b" />
         <FinanceStat label={t.pendingProofs} value={String(payments.length)} tone="#5268ff" />
-        <FinanceStat label={t.payoutHold} value={moneyText(payoutHoldMinor, 'SYP', lang)} tone="#e5b80b" />
-        <FinanceStat label={t.refundReserve} value={moneyText(refundReserveMinor, 'SYP', lang)} tone="#ff5f7d" />
+        <FinanceStat label={t.payoutHold} value={moneyText(payoutHoldMinor, defaultDisplayCurrency(), lang)} tone="#e5b80b" />
+        <FinanceStat label={t.refundReserve} value={moneyText(refundReserveMinor, defaultDisplayCurrency(), lang)} tone="#ff5f7d" />
       </section>
 
       <section style={styles.grid}>

@@ -21,6 +21,7 @@ import {
 
 const MESSAGING_ELIGIBLE_BOOKING_STATUSES = ['CONFIRMED', 'COMPLETED', 'DISPUTED']
 import { listingTitleText, moneyText, providerText, statusText } from '../../shared/i18n/display'
+import { defaultDisplayCurrency } from '../../shared/country/presentation'
 
 // The narrower shape shared by both sources this page draws staff bookings from: the admin
 // review queue returns full listings, but the host overview's "requests" only include this
@@ -408,7 +409,7 @@ export function ImmocontactPage({ lang }: Props) {
           <Stat label={t.payments} value={String(paymentThreads.length)} />
           <Stat label={t.rides} value={String(rideThreads.length)} />
           <Stat label={t.gifts} value={String(giftThreads.length)} />
-          <Stat label={t.balance} value={moneyText(overview?.wallet?.cachedBalanceMinor || 0, 'SYP', lang)} />
+          <Stat label={t.balance} value={moneyText(overview?.wallet?.cachedBalanceMinor || 0, defaultDisplayCurrency(), lang)} />
         </div>
         <button disabled={status === 'loading'} onClick={() => void loadOverview()}>
           {status === 'loading' ? t.loading : t.refresh}
@@ -715,7 +716,7 @@ function giftThread(gift: Record<string, unknown>, direction: 'sent' | 'claimed'
   return {
     id: `${direction}-${String(gift.id || Math.random())}`,
     title: direction === 'sent' ? (pick(lang, 'هدية مرسلة', 'Sent gift', 'Cadeau envoyé')) : (pick(lang, 'هدية مستلمة', 'Claimed gift', 'Cadeau reçu')),
-    subtitle: moneyText(Number(gift.amountMinor || 0), String(gift.currency || 'SYP'), lang),
+    subtitle: moneyText(Number(gift.amountMinor || 0), String(gift.currency || defaultDisplayCurrency()), lang),
     status: statusText(String(gift.status || '-'), lang),
     href: '/wallet',
     type: 'gift',

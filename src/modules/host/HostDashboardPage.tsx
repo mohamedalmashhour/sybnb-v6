@@ -4,7 +4,7 @@ import { ProjectUnitsBuilder } from '../seller/ProjectUnitsBuilder'
 import { priceFreshness } from '../../shared/listing/priceFreshness'
 import { PriceFreshnessTag } from '../../shared/listing/PriceFreshnessTag'
 import { IdPrivacyBadge } from '../../shared/trust/IdPrivacyBadge'
-import { localeForLang } from '../../shared/country/presentation'
+import { localeForLang, defaultDisplayCurrency } from '../../shared/country/presentation'
 import type { CSSProperties, ReactNode } from 'react'
 import { pick, type Lang } from '../../engines/language/languageEngine'
 import {
@@ -433,7 +433,7 @@ export function HostDashboardPage({ lang, mode = 'host', focus }: Props) {
     : isDocumentPendingReview
       ? t.pendingVerification
       : t.notVerifiedYet
-  const dashboardCurrency = visibleListings[0]?.currency || overview?.requests[0]?.currency || 'SYP'
+  const dashboardCurrency = visibleListings[0]?.currency || overview?.requests[0]?.currency || defaultDisplayCurrency()
   const activeListingsLabel = isAr
     ? `${visibleListings.length} ${providerCopy.activeUnit}`
     : `${visibleListings.length} ${providerCopy.activeUnit}`

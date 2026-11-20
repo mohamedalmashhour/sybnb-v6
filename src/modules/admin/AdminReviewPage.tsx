@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { localeForLang } from '../../shared/country/presentation'
+import { localeForLang, defaultDisplayCurrency } from '../../shared/country/presentation'
 import type { CSSProperties, ReactNode } from 'react'
 import { pick, type Lang } from '../../engines/language/languageEngine'
 import {
@@ -419,12 +419,12 @@ function ShortRentAdminCommandDashboard({
   // (2026-10-23 -- they used to be added into one SYP number).
   const sumByCurrency = (rows: typeof payouts, pick: (p: (typeof payouts)[number]) => number) => {
     const out: Record<string, number> = {}
-    for (const row of rows) { const c = String(row.currency || 'SYP').toUpperCase(); out[c] = (out[c] || 0) + (pick(row) || 0) }
+    for (const row of rows) { const c = String(row.currency || defaultDisplayCurrency()).toUpperCase(); out[c] = (out[c] || 0) + (pick(row) || 0) }
     return out
   }
   const moneyMulti = (totals: Record<string, number>) => {
     const parts = Object.entries(totals).filter(([, v]) => v).map(([c, v]) => moneyText(v, c, lang))
-    return parts.length ? parts.join(' + ') : moneyText(0, 'SYP', lang)
+    return parts.length ? parts.join(' + ') : moneyText(0, defaultDisplayCurrency(), lang)
   }
   const heldTotalText = moneyMulti(sumByCurrency(payouts.filter((p) => !p.eligibleNow), (p) => p.hostPayoutMinor))
   const readyPayoutText = moneyMulti(sumByCurrency(payouts.filter((p) => p.eligibleNow), (p) => p.hostPayoutMinor))
@@ -432,8 +432,8 @@ function ShortRentAdminCommandDashboard({
   const activeLedger = createShortRentLedger(previewPayment?.amountMinor || 0)
   const adminCommission = activeLedger.adminCommissionMinor
   const reconFor = (cur: string | null | undefined) => {
-    const code = String(cur || 'SYP').toUpperCase() === 'USD' ? 'USD' : 'SYP'
-    return createShamCashReconciliation(payments.filter((p) => String(p.currency || 'SYP').toUpperCase() === code), displayPayments.filter((p) => String(p.currency || 'SYP').toUpperCase() === code), lang, manualShamCashByCurrency[code] ?? null, code)
+    const code = String(cur || defaultDisplayCurrency()).toUpperCase() === 'USD' ? 'USD' : 'SYP'
+    return createShamCashReconciliation(payments.filter((p) => String(p.currency || defaultDisplayCurrency()).toUpperCase() === code), displayPayments.filter((p) => String(p.currency || defaultDisplayCurrency()).toUpperCase() === code), lang, manualShamCashByCurrency[code] ?? null, code)
   }
   // The panel and the main approve button follow the selected payment's currency.
   const shamCashReconciliation = reconFor(primaryPayment?.currency)
@@ -442,7 +442,7 @@ function ShortRentAdminCommandDashboard({
   const listingTitle = paymentListingTitle(previewPayment, lang)
   const hostName = paymentHostName(previewPayment, lang)
   const amountMinor = previewPayment?.amountMinor || 0
-  const currency = previewPayment?.currency || 'SYP'
+  const currency = previewPayment?.currency || defaultDisplayCurrency()
   const selectedPaymentNeedsCashMatch = primaryPayment ? isShamCashProvider(primaryPayment.provider) : false
   const selectedPaymentHeld = primaryPayment ? Boolean(heldPaymentIds[primaryPayment.id]) : false
   const staffSession = getStoredStaffSession('ADMIN')

@@ -44,7 +44,7 @@ ok('resolve(canada) fail-closed', /not supported/.test(e2), e2)
 
 console.log('=== BROWSER-SAFETY: public profile exposes ONLY safe fields ===')
 const p = pres.resolveCountryPresentation('syria')
-const allowed = ['countryCode', 'locale', 'fallbackLocale', 'phoneCallingCode', 'phonePlaceholder', 'supportedLanguages', 'displayCurrencies', 'timeZone', 'defaultCurrency', 'map']
+const allowed = ['countryCode', 'locale', 'fallbackLocale', 'phoneCallingCode', 'phonePlaceholder', 'supportedLanguages', 'displayCurrencies', 'timeZone', 'defaultCurrency', 'map', 'countryName', 'allCountry', 'inCountry', 'rideDefaults']
 const extra = Object.keys(p).filter((k) => !allowed.includes(k))
 ok('no fields beyond the public contract', extra.length === 0, `extra: ${extra.join(',')}`)
 const forbidden = ['operatingEntity', 'gates', 'externalGates', 'secret', 'provider', 'currencies']

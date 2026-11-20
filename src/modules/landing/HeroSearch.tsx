@@ -4,6 +4,7 @@ import type { Lang } from '../../engines/language/languageEngine'
 import { pick } from '../../engines/language/languageEngine'
 import { SYRIA_GOVERNORATES } from '../../engines/search'
 import { navigate } from '../../app/routes'
+import { countryPhrase } from '../../shared/country/presentation'
 
 // Airbnb-style search right on the home page: pick what you want, where, then search. It hands the
 // choice to the division page through the same session drafts those pages already restore from,
@@ -95,7 +96,7 @@ export function HeroSearch({ lang }: { lang: Lang }) {
         <label style={styles.field}>
           <span style={styles.label}>{pick(lang, 'أين؟', 'Where?', 'Où ?')}</span>
           <select style={styles.select} value={governorate} onChange={(event) => setGovernorate(event.target.value)}>
-            <option value="">{pick(lang, 'كل سوريا', 'All of Syria', 'Toute la Syrie')}</option>
+            <option value="">{countryPhrase('allCountry', lang)}</option>
             {SYRIA_GOVERNORATES.map((gov) => (
               <option key={gov.key} value={gov.key}>
                 {governorateName(lang, gov)}

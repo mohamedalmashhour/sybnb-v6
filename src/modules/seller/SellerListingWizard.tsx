@@ -15,6 +15,7 @@ import { EMPTY_STAY_PRICING, StayPricingFields, stayPricingPayload, stayPricingP
 import { HostPayoutSetup } from '../host/HostPayoutSetup'
 import { PROXIMITY_TAGS, PROXIMITY_DIVISIONS } from '../../shared/listing/proximityTags'
 import { LocationPicker, type LatLng } from '../../shared/maps/LocationPicker'
+import { defaultDisplayCurrency, countryCurrencies } from '../../shared/country/presentation'
 
 type Props = {
   lang: Lang
@@ -185,7 +186,7 @@ export function SellerListingWizard({ lang }: Props) {
   const [address, setAddress] = useState(draft.address ?? '')
   const [price, setPrice] = useState(draft.price || '')
   // Owner decision 2026-10-22: Rezekme stays are priced and paid in USD (the SYP rate changes daily).
-  const [currency, setCurrency] = useState(STAYS_ONLY ? 'USD' : draft.currency || 'SYP')
+  const [currency, setCurrency] = useState(STAYS_ONLY ? 'USD' : draft.currency || defaultDisplayCurrency())
   const [size, setSize] = useState(draft.size || '110')
   const [bedrooms, setBedrooms] = useState(draft.bedrooms || '3')
   const [bathrooms, setBathrooms] = useState(draft.bathrooms || '2')
@@ -443,7 +444,7 @@ export function SellerListingWizard({ lang }: Props) {
           titleEn: title,
           description,
           priceMinor: toMinor(price),
-          currency: currency === 'USD' ? 'USD' : 'SYP',
+          currency: countryCurrencies().includes(currency) ? currency : defaultDisplayCurrency(),
           instantBookEnabled: division === 'STAYS' ? instantBookEnabled : false,
           media: listingMedia,
           metadata: {
@@ -479,7 +480,7 @@ export function SellerListingWizard({ lang }: Props) {
             await createListingAuction({
               listingId: createdListing.id,
               startMinor: toMinor(price),
-              currency: currency === 'USD' ? 'USD' : 'SYP',
+              currency: countryCurrencies().includes(currency) ? currency : defaultDisplayCurrency(),
               reserveMinor: toNumber(auctionReserve) > 0 ? toMinor(auctionReserve) : null,
               durationHours: Math.max(1, Math.round(toNumber(auctionDurationDays) || 7)) * 24,
               depositMode: currency === 'USD' ? auctionDepositMode : 'NONE',

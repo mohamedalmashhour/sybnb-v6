@@ -54,6 +54,7 @@ import { isSrRideLocationConfirmed, type SrRideLocationSource } from './srRideLo
 import { srFallbackFareMinor } from './srFareModel'
 import { RecordingControls } from './RecordingControls'
 import { publicWebOrigin } from '../../shared/native/nativeShell'
+import { rideDefaultPlace } from '../../shared/country/presentation'
 
 type Props = {
   lang: Lang
@@ -459,8 +460,8 @@ const filterKeyByCategory: Record<string, string> = {
 export function SrRidePage({ lang }: Props) {
   const t = copy[lang]
   const isAr = lang === 'ar'
-  const PICKUP_DEFAULT_TEXT = pick(lang, 'دمشق، المالكي', 'Damascus, Malki', 'Damas, Malki')
-  const DROPOFF_DEFAULT_TEXT = pick(lang, 'دمشق، المزة', 'Damascus, Mezzeh', 'Damas, Mezzeh')
+  const PICKUP_DEFAULT_TEXT = rideDefaultPlace('pickup', lang)
+  const DROPOFF_DEFAULT_TEXT = rideDefaultPlace('dropoff', lang)
   const [pickup, setPickup] = useState(PICKUP_DEFAULT_TEXT)
   const [dropoff, setDropoff] = useState(DROPOFF_DEFAULT_TEXT)
   // SEC-F1-adjacent UX-4A fix (Priority A, refined twice after adversarial

@@ -11,6 +11,7 @@ import {
 import { moneyText, statusText } from '../../../shared/i18n/display'
 
 import type { Lang } from '../../../engines/language/languageEngine'
+import { defaultDisplayCurrency } from '../../../shared/country/presentation'
 type AdminGiftAction = 'allow' | 'block' | 'request_review'
 
 type GiftRecord = {
@@ -208,7 +209,7 @@ export function GiftAdminAudit({ lang = 'ar', onAction }: GiftAdminAuditProps) {
                     }}
                   >
                     <strong dir="ltr">{shortId(gift.id)}</strong>
-                    <span dir={isAr ? 'rtl' : 'ltr'}>{moneyText(gift.amountMinor || 0, gift.currency || 'SYP', lang)}</span>
+                    <span dir={isAr ? 'rtl' : 'ltr'}>{moneyText(gift.amountMinor || 0, gift.currency || defaultDisplayCurrency(), lang)}</span>
                     <small>{statusText(gift.status, lang)}</small>
                   </button>
                 ))}
@@ -224,7 +225,7 @@ export function GiftAdminAudit({ lang = 'ar', onAction }: GiftAdminAuditProps) {
                 <div style={styles.infoGrid}>
                   <Info label={t.giftRef} value={shortId(selectedGift.id)} />
                   <Info label={t.sender} value={shortId(selectedGift.senderUserId)} />
-                  <Info label={t.amount} value={moneyText(selectedGift.amountMinor || 0, selectedGift.currency || 'SYP', lang)} dir={isAr ? 'rtl' : 'ltr'} />
+                  <Info label={t.amount} value={moneyText(selectedGift.amountMinor || 0, selectedGift.currency || defaultDisplayCurrency(), lang)} dir={isAr ? 'rtl' : 'ltr'} />
                   <Info label={t.status} value={statusText(selectedGift.status, lang)} dir={isAr ? 'rtl' : 'ltr'} />
                   <Info label={t.created} value={formatDate(selectedGift.createdAt, lang)} />
                   <Info label={t.expires} value={formatDate(selectedGift.expiresAt, lang)} />

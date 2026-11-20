@@ -9,6 +9,7 @@ import {
   getStoredStaffSession,
   type PlatformLedgerResult,
 } from '../../shared/api/platformApi'
+import { defaultDisplayCurrency } from '../../shared/country/presentation'
 
 type Props = { lang: Lang }
 
@@ -99,7 +100,7 @@ export function AdminMoneyFlowPage({ lang }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type, query, offset])
 
-  const money = (minor: number, cur = 'SYP') => moneyText(minor, cur, lang)
+  const money = (minor: number, cur = defaultDisplayCurrency()) => moneyText(minor, cur, lang)
   const fmtDateTime = (value: string) => {
     try {
       return new Date(value).toLocaleString(isAr ? 'ar' : lang === 'fr' ? 'fr' : 'en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })

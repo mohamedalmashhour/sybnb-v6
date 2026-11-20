@@ -43,6 +43,7 @@ import { DateField, DateRangePicker, isValidDate, nightsBetween, type DateRange 
 import { loadSearchDatesDraft } from '../search/UnifiedSearchBar'
 import { saveCheckoutDraft } from '../bookings/checkoutDraft'
 import { stayGuestAgreement } from '../../shared/booking/guestAgreement'
+import { defaultDisplayCurrency } from '../../shared/country/presentation'
 
 type Props = {
   listingId: string
@@ -472,7 +473,7 @@ export function ListingDetailPage({ listingId, lang }: Props) {
         protectionMinor: quotes.protected.protectionMinor,
         standardTotalMinor: standard.totalMinor,
         protectedTotalMinor: quotes.protected.totalMinor,
-        currency: standard.currency || listing?.currency || 'SYP',
+        currency: standard.currency || listing?.currency || defaultDisplayCurrency(),
       }
     }
     const protectionMinor = Math.round(feesStandard.stayAmountMinor * 0.03)
@@ -489,7 +490,7 @@ export function ListingDetailPage({ listingId, lang }: Props) {
       protectionMinor,
       standardTotalMinor: feesStandard.totalMinor,
       protectedTotalMinor: feesStandard.totalMinor + protectionMinor,
-      currency: listing?.currency || 'SYP',
+      currency: listing?.currency || defaultDisplayCurrency(),
     }
   }, [quotes, feesStandard, stayQuote, listing?.currency])
   const protectionFeeMinor = pricing.protectionMinor

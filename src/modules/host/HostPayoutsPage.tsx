@@ -14,7 +14,7 @@ import {
   type PayoutRequestStatus,
 } from '../../shared/api/platformApi'
 import { moneyText } from '../../shared/i18n/display'
-import { localeForLang } from '../../shared/country/presentation'
+import { localeForLang, defaultDisplayCurrency, countryCurrencies } from '../../shared/country/presentation'
 import { methodDetailsText, methodTypeLabel, payoutStatusLabel } from '../../shared/payouts/payoutLabels'
 
 type Props = {
@@ -70,7 +70,7 @@ export function HostPayoutsPage({ lang, mode = 'host' }: Props) {
   const [withdrawError, setWithdrawError] = useState('')
   // Balances are currency-scoped (wallets are keyed by user + currency, no FX). A host who prices
   // some listings in USD has a separate USD balance, so they pick which currency to view/withdraw.
-  const [payoutCurrency, setPayoutCurrency] = useState<'SYP' | 'USD'>('SYP')
+  const [payoutCurrency, setPayoutCurrency] = useState<string>(defaultDisplayCurrency())
 
   useEffect(() => {
     void loadMethod()
@@ -126,7 +126,7 @@ export function HostPayoutsPage({ lang, mode = 'host' }: Props) {
     }
   }
 
-  const currency = summary?.currency || 'SYP'
+  const currency = summary?.currency || defaultDisplayCurrency()
   const maxMinor = Math.max(0, (summary?.availableMinor ?? 0) - (summary?.pendingMinor ?? 0))
   const amountMinor = Math.round(Number(amountText.replace(/[^\d]/g, '')) || 0)
   const amountInvalid = amountMinor <= 0 || amountMinor > maxMinor
@@ -286,7 +286,7 @@ export function HostPayoutsPage({ lang, mode = 'host' }: Props) {
         <section style={styles.card} aria-labelledby="withdraw-title">
           <h2 id="withdraw-title" style={styles.cardTitle}>{pick(lang, 'سحب الرصيد', 'Withdraw', 'Retrait')}</h2>
           <div style={styles.currencyRow} role="tablist" aria-label={pick(lang, 'العملة', 'Currency', 'Devise')}>
-            {(['SYP', 'USD'] as const).map((cur) => (
+            {countryCurrencies().map((cur) => (
               <button
                 key={cur}
                 type="button"

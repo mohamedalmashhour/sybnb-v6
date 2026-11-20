@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { localeForLang } from '../../shared/country/presentation'
+import { localeForLang, defaultDisplayCurrency } from '../../shared/country/presentation'
 import type { CSSProperties } from 'react'
 import { pick, type Lang } from '../../engines/language/languageEngine'
 import {
@@ -348,7 +348,7 @@ export function DashboardPage({ lang }: Props) {
           <section style={styles.quickCards}>
             <button style={styles.paymentTile} onClick={() => (window.location.hash = '/wallet')}>
               <span>{t.availableBalance}</span>
-              <strong>{moneyText(overview?.wallet?.cachedBalanceMinor || 0, overview?.wallet?.currency || activeBooking?.currency || 'SYP', lang)}</strong>
+              <strong>{moneyText(overview?.wallet?.cachedBalanceMinor || 0, overview?.wallet?.currency || activeBooking?.currency || defaultDisplayCurrency(), lang)}</strong>
               <small>{t.wallet}</small>
             </button>
             <button style={styles.trustTile} onClick={() => (window.location.hash = '/trust-center')}>
@@ -384,11 +384,11 @@ export function DashboardPage({ lang }: Props) {
         <div style={styles.walletStats}>
           <article style={styles.walletStat}>
             <span>{t.availableBalance}</span>
-            <strong>{moneyText(overview?.wallet?.cachedBalanceMinor || 0, overview?.wallet?.currency || activeBooking?.currency || 'SYP', lang)}</strong>
+            <strong>{moneyText(overview?.wallet?.cachedBalanceMinor || 0, overview?.wallet?.currency || activeBooking?.currency || defaultDisplayCurrency(), lang)}</strong>
           </article>
           <article style={styles.walletStatProtected}>
             <span>{t.protectedFunds}</span>
-            <strong>{moneyText(protectedFunds, activeBooking?.currency || 'SYP', lang)}</strong>
+            <strong>{moneyText(protectedFunds, activeBooking?.currency || defaultDisplayCurrency(), lang)}</strong>
           </article>
         </div>
 
@@ -490,7 +490,7 @@ function normalizeWalletRows(overview: PlatformOverview | null, lang: Lang) {
 
   return (overview.wallet?.entries || []).slice(0, 5).map((entry, index) => {
     const amountMinor = typeof entry.amountMinor === 'number' ? entry.amountMinor : 0
-    const currency = typeof entry.currency === 'string' ? entry.currency : overview.wallet?.currency || 'SYP'
+    const currency = typeof entry.currency === 'string' ? entry.currency : overview.wallet?.currency || defaultDisplayCurrency()
     const type = typeof entry.type === 'string' ? entry.type : pick(lang, 'حركة محفظة', 'Wallet movement', 'Mouvement de portefeuille')
     const status = typeof entry.status === 'string' ? entry.status : 'RECORDED'
     return {

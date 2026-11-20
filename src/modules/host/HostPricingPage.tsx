@@ -3,12 +3,13 @@ import { pick, type Lang } from '../../engines/language/languageEngine'
 import { navigate } from '../../app/routes'
 import { fetchHostListingPricing, saveHostListingPricing, type StaySeason } from '../../shared/api/platformApi'
 import { EMPTY_STAY_PRICING, StayPricingFields, stayPricingPayload, stayPricingProblem, type StayPricingDraft } from './StayPricingFields'
+import { defaultDisplayCurrency } from '../../shared/country/presentation'
 
 // Host pricing editor for one stay (2026-10-22). Saving does NOT send the listing back to review.
 export function HostPricingPage({ lang, listingId }: { lang: Lang; listingId: string }) {
   const [draft, setDraft] = useState<StayPricingDraft>(EMPTY_STAY_PRICING)
   const [basePrice, setBasePrice] = useState(0)
-  const [currency, setCurrency] = useState('SYP')
+  const [currency, setCurrency] = useState(defaultDisplayCurrency())
   const [weekendNights, setWeekendNights] = useState<number[]>([])
   const [seasons, setSeasons] = useState<StaySeason[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'saving' | 'saved' | 'error'>('loading')

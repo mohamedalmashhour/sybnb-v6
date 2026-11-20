@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { Lang } from '../../engines/language/languageEngine'
+import { countryPhrase } from '../../shared/country/presentation'
 
 type SearchStatesProps = {
   lang: Lang
@@ -12,13 +13,13 @@ type SearchStatesProps = {
 const T = {
   ar: {
     loadingTitle: 'جاري البحث',
-    loadingBody: 'نراجع النتائج المناسبة لك داخل سوريا.',
+    get loadingBody() { return `نراجع النتائج المناسبة لك ${countryPhrase('inCountry', 'ar')}.` },
     emptyTitle: 'لا توجد نتائج مطابقة',
     emptyBody: 'جرّب تغيير المنطقة أو تعديل بعض الخيارات.',
     errorTitle: 'تعذر إكمال البحث',
     errorBody: 'الاتصال غير مستقر. حاول مرة أخرى أو اعرض النتائج المحفوظة.',
     reset: 'إعادة ضبط',
-    allSyria: 'عرض كل سوريا',
+    get allSyria() { return `عرض ${countryPhrase('allCountry', 'ar')}` },
     retry: 'إعادة المحاولة',
   },
   en: {
@@ -29,18 +30,18 @@ const T = {
     errorTitle: 'Search could not finish',
     errorBody: 'Connection is unstable. Try again or view cached results.',
     reset: 'Reset',
-    allSyria: 'Show all Syria',
+    get allSyria() { return `Show ${countryPhrase('allCountry', 'en').replace(/^All of/, 'all of')}` },
     retry: 'Try again',
   },
   fr: {
     loadingTitle: 'Recherche en cours',
-    loadingBody: 'Nous vérifions les résultats correspondants partout en Syrie.',
+    get loadingBody() { return `Nous vérifions les résultats correspondants ${countryPhrase('inCountry', 'fr')}.` },
     emptyTitle: 'Aucun résultat correspondant',
     emptyBody: 'Essayez de changer de zone ou de retirer certains filtres.',
     errorTitle: 'La recherche n’a pas pu aboutir',
     errorBody: 'La connexion est instable. Réessayez ou consultez les résultats enregistrés.',
     reset: 'Réinitialiser',
-    allSyria: 'Afficher toute la Syrie',
+    get allSyria() { return `Afficher : ${countryPhrase('allCountry', 'fr')}` },
     retry: 'Réessayer',
   },
 }

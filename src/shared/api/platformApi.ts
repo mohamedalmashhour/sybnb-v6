@@ -538,6 +538,7 @@ import { addLocalFavourite, clearLocalFavourites, readLocalFavourites, removeLoc
 import { readQueue, enqueueFix, clearQueue } from '../lib/gps-queue'
 import { optimizePhoto } from '../lib/image-compress'
 import { authStorage } from './authStorage'
+import { defaultDisplayCurrency } from '../country/presentation'
 export type HostDashboardMode = 'host' | 'seller'
 
 export async function fetchPrototypeHealth() {
@@ -3859,9 +3860,9 @@ export async function saveHostPayoutMethod(method: HostPayoutMethod, mode: HostD
   return response.method
 }
 
-export async function fetchHostPayouts(mode: HostDashboardMode = 'host', currency = 'SYP') {
+export async function fetchHostPayouts(mode: HostDashboardMode = 'host', currency = defaultDisplayCurrency()) {
   const session = await getHostDashboardSession(mode)
-  const query = `?currency=${encodeURIComponent(String(currency || 'SYP').toUpperCase())}`
+  const query = `?currency=${encodeURIComponent(String(currency || defaultDisplayCurrency()).toUpperCase())}`
   const response = await apiRequest<{ ok: true } & HostPayoutsSummary>(`/api/host/payouts${query}`, { token: session.token })
   return {
     availableMinor: response.availableMinor,
@@ -3871,12 +3872,12 @@ export async function fetchHostPayouts(mode: HostDashboardMode = 'host', currenc
   } satisfies HostPayoutsSummary
 }
 
-export async function requestHostPayout(amountMinor: number, mode: HostDashboardMode = 'host', currency = 'SYP') {
+export async function requestHostPayout(amountMinor: number, mode: HostDashboardMode = 'host', currency = defaultDisplayCurrency()) {
   const session = await getHostDashboardSession(mode)
   const response = await apiRequest<{ ok: true; request: HostPayoutRequest }>('/api/host/payouts', {
     method: 'POST',
     token: session.token,
-    body: { amountMinor, currency: String(currency || 'SYP').toUpperCase() },
+    body: { amountMinor, currency: String(currency || defaultDisplayCurrency()).toUpperCase() },
   })
   return response.request
 }

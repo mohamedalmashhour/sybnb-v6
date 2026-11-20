@@ -14,6 +14,13 @@ export type CountryPresentationProfile = {
   supportedLanguages: string[]
   displayCurrencies: string[]
   timeZone: string
+  // Country name in each UI language (used in labels like "All of <country>").
+  countryName: { ar: string; en: string; fr: string }
+  // Full phrases (grammar differs per language/country): "All of …" and "in …".
+  allCountry: { ar: string; en: string; fr: string }
+  inCountry: { ar: string; en: string; fr: string }
+  // Example/default places shown in the ride booking form.
+  rideDefaults: { pickup: { ar: string; en: string; fr: string }; dropoff: { ar: string; en: string; fr: string } }
   // Main currency shown by default (one of displayCurrencies).
   defaultCurrency: string
   // Map defaults for this country: where maps open and how far zoomed when there is no point yet.
@@ -29,7 +36,7 @@ const PRESENTATIONS: Record<string, CountryPresentationProfile> = {
 }
 
 const REQUIRED_FIELDS: (keyof CountryPresentationProfile)[] = [
-  'countryCode', 'locale', 'fallbackLocale', 'phoneCallingCode', 'phonePlaceholder', 'supportedLanguages', 'displayCurrencies', 'timeZone', 'defaultCurrency', 'map',
+  'countryCode', 'locale', 'fallbackLocale', 'phoneCallingCode', 'phonePlaceholder', 'supportedLanguages', 'displayCurrencies', 'timeZone', 'defaultCurrency', 'map', 'countryName', 'allCountry', 'inCountry', 'rideDefaults',
 ]
 
 function assertComplete(p: CountryPresentationProfile, key: string): CountryPresentationProfile {
@@ -85,8 +92,26 @@ export function countryMapCenter(): { lat: number; lng: number } {
 export function countryMapZoom(): number {
   return activeCountryPresentation().map.zoom
 }
+// Every currency the active country displays/accepts (Syria: SYP + USD).
+export function countryCurrencies(): string[] {
+  return [...activeCountryPresentation().displayCurrencies]
+}
 export function defaultDisplayCurrency(): string {
   return activeCountryPresentation().defaultCurrency
+}
+
+// Country name for a UI language (ar / fr / en fallback).
+export function countryNameText(lang: string | undefined): string {
+  const n = activeCountryPresentation().countryName
+  return lang === 'ar' ? n.ar : lang === 'fr' ? n.fr : n.en
+}
+export function countryPhrase(which: 'allCountry' | 'inCountry', lang: string | undefined): string {
+  const n = activeCountryPresentation()[which]
+  return lang === 'ar' ? n.ar : lang === 'fr' ? n.fr : n.en
+}
+export function rideDefaultPlace(which: 'pickup' | 'dropoff', lang: string | undefined): string {
+  const d = activeCountryPresentation().rideDefaults[which]
+  return lang === 'ar' ? d.ar : lang === 'fr' ? d.fr : d.en
 }
 
 export function phoneCallingCode(): string {

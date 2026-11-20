@@ -13,6 +13,7 @@ import { listingDescriptionText, listingTitleText, statusText } from '../../shar
 import { listingDisplayTitle } from '../../shared/listing/displayTitle'
 import { listingPriceText } from '../search/listingPriceText'
 import { colors, withAlpha } from '../../shared/theme/tokens'
+import { countryPhrase } from '../../shared/country/presentation'
 
 type Props = {
   lang: Lang
@@ -528,7 +529,7 @@ export function RentalsPage({ lang, mode = 'rentals' }: Props) {
   const selectedMainGroupOption = mainGroupOptions.find((option) => option.id === visualFilters.propertyType)
   const currentPanelOptions = (
     activeSearchPanel === 'governorate'
-      ? [{ key: ALL_SYRIA_KEY, label: pick(lang, 'كل سوريا', 'All of Syria', 'Toute la Syrie') }, ...SYRIA_GOVERNORATES.map((item) => ({ key: item.key, label: labelFor(lang, item) }))]
+      ? [{ key: ALL_SYRIA_KEY, label: countryPhrase('allCountry', lang) }, ...SYRIA_GOVERNORATES.map((item) => ({ key: item.key, label: labelFor(lang, item) }))]
       : activeSearchPanel === 'city'
         ? (selectedGovernorateData?.cities || []).map((item) => ({ key: item.key, label: labelFor(lang, item) }))
         : (selectedCityData?.areas || []).map((item) => ({ key: item.key, label: labelFor(lang, item) }))
@@ -884,7 +885,7 @@ export function RentalsPage({ lang, mode = 'rentals' }: Props) {
         </section>
         <div className="rentals-search-hero" style={styles.searchHero}>
           <button style={styles.searchButton} onClick={applySearchCapsule}>{t.search}</button>
-          <button style={activeSearchPanel === 'governorate' ? styles.searchPillActive : styles.searchPill} onClick={() => setActiveSearchPanel(activeSearchPanel === 'governorate' ? null : 'governorate')}>{locationApplied ? selectedGovernorateLabel || t.governorate : pick(lang, 'كل سوريا', 'All of Syria', 'Toute la Syrie')}</button>
+          <button style={activeSearchPanel === 'governorate' ? styles.searchPillActive : styles.searchPill} onClick={() => setActiveSearchPanel(activeSearchPanel === 'governorate' ? null : 'governorate')}>{locationApplied ? selectedGovernorateLabel || t.governorate : countryPhrase('allCountry', lang)}</button>
           <button style={activeSearchPanel === 'city' ? styles.searchPillActive : styles.searchPill} onClick={() => setActiveSearchPanel(activeSearchPanel === 'city' ? null : 'city')}>{selectedCityLabel || t.city}</button>
           <button style={activeSearchPanel === 'street' ? styles.searchPillActive : styles.searchPill} onClick={() => setActiveSearchPanel(activeSearchPanel === 'street' ? null : 'street')}>{selectedStreetLabel || t.street}</button>
           <button style={styles.searchPillActive} onClick={() => setShowFilters((current) => !current)}>
@@ -954,7 +955,7 @@ export function RentalsPage({ lang, mode = 'rentals' }: Props) {
         <strong>
           {locationApplied
             ? [selectedGovernorateLabel, selectedCityLabel !== selectedGovernorateLabel ? selectedCityLabel : '', selectedStreetLabel].filter(Boolean).join(' · ')
-            : pick(lang, 'كل سوريا', 'All of Syria', 'Toute la Syrie')}
+            : countryPhrase('allCountry', lang)}
         </strong>
         <span>{selectedMainGroupOption ? text(selectedMainGroupOption, lang) : null}</span>
       </section> : null}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { pick, type Lang } from '../../../engines/language/languageEngine'
+import { phonePlaceholder } from '../../../shared/country/presentation'
 
 type GiftRecipientLandingProps = {
   lang?: Lang
@@ -19,7 +20,7 @@ const T = {
     from: 'من',
     last4: 'آخر 4 رموز',
     phone: 'رقم الهاتف الذي استلم الهدية',
-    phonePlaceholder: '+963 9XX XXX XXX',
+    get phonePlaceholder() { return phonePlaceholder() },
     phoneNote: 'يجب استخدام نفس رقم الهاتف الذي استلم الهدية',
     noSell: 'لا يمكن بيع أو تحويل الهدية إلى رقم آخر',
     walletNote: 'إذا لم يكن لديك محفظة، سيتم إنشاؤها تلقائياً بعد التحقق.',
@@ -37,7 +38,7 @@ const T = {
     from: 'From',
     last4: 'Last 4',
     phone: 'Phone number the gift was sent to',
-    phonePlaceholder: '+963 9XX XXX XXX',
+    get phonePlaceholder() { return phonePlaceholder() },
     phoneNote: 'Use the same phone number that received this gift',
     noSell: 'This gift cannot be sold or moved to another number',
     walletNote: 'If you do not have a wallet, one will be created after verification.',
@@ -55,7 +56,7 @@ const T = {
     from: 'De',
     last4: '4 derniers',
     phone: 'Numéro de téléphone auquel le cadeau a été envoyé',
-    phonePlaceholder: '+963 9XX XXX XXX',
+    get phonePlaceholder() { return phonePlaceholder() },
     phoneNote: 'Utilisez le même numéro de téléphone que celui qui a reçu ce cadeau',
     noSell: 'Ce cadeau ne peut être ni vendu ni transféré vers un autre numéro',
     walletNote: 'Si vous n’avez pas de portefeuille, un portefeuille sera créé après la vérification.',

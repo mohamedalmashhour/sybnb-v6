@@ -15,6 +15,7 @@ import {
   GiftRecipientLanding,
   GiftRedeemedSuccess,
 } from './gift-flow'
+import { phoneCallingCode } from '../../shared/country/presentation'
 export { isGiftFlowRoute } from './giftRoutes'
 
 type GiftFlowRoutesProps = {
@@ -152,6 +153,6 @@ async function finishGiftClaim(
 
 function maskPhone(phone: string) {
   const trimmed = phone.trim()
-  if (trimmed.length <= 6) return trimmed || '+963 9•• ••• •••'
+  if (trimmed.length <= 6) return trimmed || `${phoneCallingCode()} •• ••• •••`
   return `${trimmed.slice(0, 6)}•••${trimmed.slice(-2)}`
 }

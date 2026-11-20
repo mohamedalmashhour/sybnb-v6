@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { Lang } from '../../engines/language/languageEngine'
 import { getCity, getGovernorate, labelFor, SYRIA_GOVERNORATES } from '../../engines/search'
+import { countryPhrase } from '../../shared/country/presentation'
 
 export type LocationValue = {
   governorate: string
@@ -26,7 +27,7 @@ const T = {
     city: 'المدينة',
     area: 'المنطقة',
     optional: 'اختياري',
-    allSyria: 'كل سوريا',
+    get allSyria() { return countryPhrase('allCountry', 'ar') },
     done: 'تم',
   },
   en: {
@@ -35,7 +36,7 @@ const T = {
     city: 'City',
     area: 'Area',
     optional: 'optional',
-    allSyria: 'All of Syria',
+    get allSyria() { return countryPhrase('allCountry', 'en') },
     done: 'Done',
   },
   fr: {
@@ -44,7 +45,7 @@ const T = {
     city: 'Ville',
     area: 'Quartier',
     optional: 'facultatif',
-    allSyria: 'Toute la Syrie',
+    get allSyria() { return countryPhrase('allCountry', 'fr') },
     done: 'OK',
   },
 }

@@ -10,6 +10,7 @@ import {
   type PlatformHealth,
 } from '../../shared/api/platformApi'
 import { moneyText } from '../../shared/i18n/display'
+import { defaultDisplayCurrency } from '../../shared/country/presentation'
 
 type Props = {
   lang: Lang
@@ -137,8 +138,8 @@ export function PlatformStatusPage({ lang }: Props) {
       { label: t.listings, value: String(sumMap(metrics?.listingsByDivision || {})), state: t.ok },
       { label: t.bookings, value: String(sumMap(metrics?.bookingsByStatus || {})), state: t.ok },
       { label: t.rides, value: String(sumMap(metrics?.ridesByStatus || {})), state: t.ok },
-      { label: t.payments, value: moneyText(metrics?.approvedPaymentVolumeMinor || 0, 'SYP', lang), state: t.ok },
-      { label: t.wallet, value: moneyText(metrics?.walletBalanceMinor || 0, 'SYP', lang), state: t.ok },
+      { label: t.payments, value: moneyText(metrics?.approvedPaymentVolumeMinor || 0, defaultDisplayCurrency(), lang), state: t.ok },
+      { label: t.wallet, value: moneyText(metrics?.walletBalanceMinor || 0, defaultDisplayCurrency(), lang), state: t.ok },
     ],
     [contracts, health, isAr, lang, metrics, t],
   )

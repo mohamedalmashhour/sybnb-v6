@@ -11,6 +11,7 @@ import {
   type PlatformRideRequest,
 } from '../../shared/api/platformApi'
 import { moneyText, statusText } from '../../shared/i18n/display'
+import { defaultDisplayCurrency } from '../../shared/country/presentation'
 
 type Props = {
   lang: Lang
@@ -193,7 +194,7 @@ export function BusinessAccountPage({ lang }: Props) {
             <strong>{t.usage}</strong>
             <div style={styles.stat}>
               <span>{t.totalCompleted}</span>
-              <strong dir={isAr ? 'rtl' : 'ltr'}>{moneyText(totalMinor, 'SYP', lang)}</strong>
+              <strong dir={isAr ? 'rtl' : 'ltr'}>{moneyText(totalMinor, defaultDisplayCurrency(), lang)}</strong>
             </div>
             {rides.length === 0 ? (
               <p>{t.noRides}</p>

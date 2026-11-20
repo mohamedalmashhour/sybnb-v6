@@ -12,6 +12,7 @@ import {
   type PlatformAdminOverviewBooking,
   type AdminLoyaltyAiResult,
 } from '../../shared/api/platformApi'
+import { defaultDisplayCurrency } from '../../shared/country/presentation'
 
 type Props = { lang: Lang }
 
@@ -223,9 +224,9 @@ export function AdminCustomerPage({ lang }: Props) {
           </section>
 
           <section style={styles.statsRow}>
-            <Stat label={t.spent} value={money(data.totals.lifetimeSpentMinor, 'SYP')} tone={T.green} />
-            <Stat label={t.earned} value={money(data.totals.lifetimePayoutMinor, 'SYP')} tone={T.blue2} />
-            <Stat label={t.wallet} value={money(data.totals.walletBalanceMinor, 'SYP')} tone={T.gold} />
+            <Stat label={t.spent} value={money(data.totals.lifetimeSpentMinor, defaultDisplayCurrency())} tone={T.green} />
+            <Stat label={t.earned} value={money(data.totals.lifetimePayoutMinor, defaultDisplayCurrency())} tone={T.blue2} />
+            <Stat label={t.wallet} value={money(data.totals.walletBalanceMinor, defaultDisplayCurrency())} tone={T.gold} />
             <Stat label={t.listings} value={String(data.totals.listingsCount)} tone={T.cyan} />
           </section>
 

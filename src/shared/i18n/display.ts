@@ -1,6 +1,6 @@
 import type { Lang } from '../../engines/language/languageEngine'
 import type { PlatformListing } from '../api/platformApi'
-import { localeForLang } from '../country/presentation'
+import { localeForLang, defaultDisplayCurrency } from '../country/presentation'
 
 export const statusLabels: Record<Lang, Record<string, string>> = {
   ar: {
@@ -172,9 +172,9 @@ export function divisionText(division: string | null | undefined, lang: Lang) {
   return divisionLabels[lang][division] || division.replace(/_/g, ' ')
 }
 
-export function moneyText(amountMinor: number | null | undefined, currency = 'SYP', lang: Lang) {
+export function moneyText(amountMinor: number | null | undefined, currency = defaultDisplayCurrency(), lang: Lang) {
   const amount = Number(amountMinor || 0).toLocaleString(localeForLang(lang))
-  const code = String(currency || 'SYP').toUpperCase()
+  const code = String(currency || defaultDisplayCurrency()).toUpperCase()
   // Per-listing currency: Syria allows both the local pound (SYP) and USD (commonly quoted for
   // stays/hotels). Each listing is shown in its own currency with no FX conversion. USD renders with
   // a leading $ in every locale; the Arabic pound keeps its local symbol (ل.س).

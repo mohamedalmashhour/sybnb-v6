@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { pick, type Lang } from '../../engines/language/languageEngine'
 import { createPromoCode, fetchPromoCodes, setPromoCodeActive, type PlatformPromoCode } from '../../shared/api/platformApi'
 import { moneyText } from '../../shared/i18n/display'
+import { defaultDisplayCurrency } from '../../shared/country/presentation'
 
 type Props = {
   lang: Lang
@@ -191,9 +192,9 @@ export function AdminPromoCodesPage({ lang }: Props) {
           <article key={promoCode.id} style={styles.card}>
             <strong dir="ltr">{promoCode.code}</strong>
             <span>
-              {promoCode.discountType === 'PERCENT' ? `${promoCode.discountValue}%` : moneyText(promoCode.discountValue, 'SYP', lang)}
+              {promoCode.discountType === 'PERCENT' ? `${promoCode.discountValue}%` : moneyText(promoCode.discountValue, defaultDisplayCurrency(), lang)}
               {promoCode.discountType === 'PERCENT' && promoCode.maxDiscountMinor != null
-                ? ` (max ${moneyText(promoCode.maxDiscountMinor, 'SYP', lang)})`
+                ? ` (max ${moneyText(promoCode.maxDiscountMinor, defaultDisplayCurrency(), lang)})`
                 : ''}
             </span>
             {promoCode.expiresAt && <span dir="ltr">{new Date(promoCode.expiresAt).toLocaleString(pick(lang, 'ar-SY', 'en-US', 'fr-CA'))}</span>}
