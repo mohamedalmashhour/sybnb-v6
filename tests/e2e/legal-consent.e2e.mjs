@@ -26,8 +26,9 @@ check('GET /api/legal -> 200', m.status === 200, m.status)
 const terms = (m.j?.documents || []).find(d => d.key === 'terms')
 const privacy = (m.j?.documents || []).find(d => d.key === 'privacy')
 check('terms + privacy present with versions', Boolean(terms?.version && privacy?.version), JSON.stringify({ terms, privacy }))
-check('terms/privacy are DRAFT (owner content required)', terms?.status === 'DRAFT' && privacy?.status === 'DRAFT', 'not draft')
-check('manifest is launch-blocking while any doc is DRAFT', m.j?.launchBlocking === true, String(m.j?.launchBlocking))
+// Lawyer-accepted and PUBLISHED on 2026-10-09 (server/lib/legal.mjs), so no longer DRAFT.
+check('terms/privacy are PUBLISHED (lawyer-accepted 2026-10-09)', terms?.status === 'PUBLISHED' && privacy?.status === 'PUBLISHED', `${terms?.status}/${privacy?.status}`)
+check('manifest is not launch-blocking once every doc is PUBLISHED', m.j?.launchBlocking === false, String(m.j?.launchBlocking))
 
 console.log('\n=== 2. CONSENT REQUIRES AUTH ===')
 check('anon cannot record consent (401)', (await call('POST', '/api/legal/consent', null, { documentKey: 'terms', version: terms.version })).status === 401)

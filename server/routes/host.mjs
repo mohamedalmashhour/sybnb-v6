@@ -220,6 +220,16 @@ export async function handleHost(req, res, url, context) {
     const canConfirm = status === 'CONFIRMED' && existing.status === 'REQUESTED'
     const canCancel = status === 'CANCELLED' && ['REQUESTED', 'CONFIRMED'].includes(existing.status)
 
+    // A stay already swept to COMPLETED is a finished stay: answer like the ended-stay check below
+    // (409 BOOKING_STAY_ENDED), matching the guest cancel route, instead of a generic 400.
+    if (status === 'CANCELLED' && existing.status === 'COMPLETED') {
+      const error = new Error('This stay has already ended and can no longer be cancelled.')
+      error.statusCode = 409
+      error.code = 'BOOKING_STAY_ENDED'
+      error.expose = true
+      throw error
+    }
+
     if (!canConfirm && !canCancel) {
       const error = new Error('This booking cannot be changed by the host at its current status.')
       error.statusCode = 400

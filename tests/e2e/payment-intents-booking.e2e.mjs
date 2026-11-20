@@ -89,6 +89,17 @@ const evt = (type, ref, extra = {}) => ({ id: `evt_pib_${Date.now()}_${evtSeq++}
 function daysAgoIso(n) {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString()
 }
+// The API refuses check-in dates in the past (BOOKING_DATES_IN_PAST). Suites that need a stay in the
+// past book the same-length window ~1000 days ahead, then move the stored dates back.
+function bookableIso(n) { return daysAgoIso(n > 0 ? n - 1000 : n) }
+async function restorePastDates(created, inDaysAgo, outDaysAgo) {
+  const id = created?.j?.booking?.id
+  if (!id || !(inDaysAgo > 0)) return
+  const checkIn = new Date(daysAgoIso(inDaysAgo)), checkOut = new Date(daysAgoIso(outDaysAgo))
+  await db().booking.update({ where: { id }, data: { checkIn, checkOut } })
+  created.j.booking.checkIn = checkIn.toISOString(); created.j.booking.checkOut = checkOut.toISOString()
+}
+
 
 async function verifyHostForPublishing() {
   await call('PATCH', '/api/me/id-document', H, { fileBase64: 'ZmFrZQ==', mimeType: 'image/png' })
@@ -118,9 +129,9 @@ async function makeStaysListing(priceMinor, instantBookEnabled = true) {
 async function makeBooking(listingId, checkInDaysAgo, checkOutDaysAgo) {
   const created = await call('POST', '/api/bookings', G, {
     listingId,
-    checkIn: daysAgoIso(checkInDaysAgo),
-    checkOut: daysAgoIso(checkOutDaysAgo),
+    checkIn: bookableIso(checkInDaysAgo), checkOut: bookableIso(checkOutDaysAgo),
   })
+  await restorePastDates(created, checkInDaysAgo, checkOutDaysAgo)
   return created.j?.booking
 }
 
@@ -419,7 +430,10 @@ const bookingG = await makeBooking(nonInstantListing.id, 5, 3)
 const intentG = (await call('POST', '/api/payments/intents', G, { bookingId: bookingG.id })).j?.intent
 await webhook(evt('payment_intent.succeeded', intentG.reference, { amount_minor: intentG.amountMinor, currency: intentG.currency }))
 const bookingGAfter = (await call('GET', `/api/bookings/${bookingG.id}`, G)).j?.booking
-check('non-instant-book payment_intent success lands the booking in REQUESTED', bookingGAfter?.status === 'REQUESTED', bookingGAfter?.status)
+// Owner decisions 2026-10-22/23: a received payment confirms the booking, even on a non-instant listing.
+check('non-instant-book payment_intent success confirms the booking (CONFIRMED)', bookingGAfter?.status === 'CONFIRMED', bookingGAfter?.status)
+// Keep testing the admin-reject path for a paid booking still REQUESTED (older data).
+await db().booking.update({ where: { id: bookingG.id }, data: { status: 'REQUESTED' } })
 const rejectG = await call('PATCH', `/api/admin/review-queue/booking/${bookingG.id}`, A, { decision: 'REJECT' })
 check('admin rejected the REQUESTED payment_intent booking -> CANCELLED', rejectG.status === 200 && rejectG.j?.entity?.status === 'CANCELLED', JSON.stringify(rejectG.j))
 const guestRefundG = await walletEntries(bookingG.id, ['booking_refund'])

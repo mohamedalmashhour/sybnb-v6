@@ -28,7 +28,7 @@ async function makeBuy(token, meta, price, title) {
 }
 async function approvePlan(token) {
   const ref = 'BUY-' + Math.floor(performance.now()*1000)
-  const p = await call('POST','/api/payments/seller-plan-proof', token, {planCode:'plus', amountMinor:1500, currency:'USD', providerRef:ref, legalName:'X', sellerType:'dealer'})
+  const p = await call('POST','/api/payments/seller-plan-proof', token, {planCode:'plus', amountMinor:1900, currency:'USD', providerRef:ref, legalName:'X', sellerType:'dealer'})
   await call('PATCH', `/api/admin/review-queue/payment/${p.j?.proof?.id}`, A, {decision:'APPROVE'})
 }
 

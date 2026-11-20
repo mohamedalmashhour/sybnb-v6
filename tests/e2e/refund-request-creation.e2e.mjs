@@ -66,6 +66,17 @@ async function call(method, path, token, body) {
 }
 function daysAgoIso(n) { return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString() }
 
+// The API refuses check-in dates in the past (BOOKING_DATES_IN_PAST). Suites that need a stay in the
+// past book the same-length window ~1000 days ahead, then move the stored dates back.
+function bookableIso(n) { return daysAgoIso(n > 0 ? n - 1000 : n) }
+async function restorePastDates(created, inDaysAgo, outDaysAgo) {
+  const id = created?.j?.booking?.id
+  if (!id || !(inDaysAgo > 0)) return
+  const checkIn = new Date(daysAgoIso(inDaysAgo)), checkOut = new Date(daysAgoIso(outDaysAgo))
+  await db().booking.update({ where: { id }, data: { checkIn, checkOut } })
+  created.j.booking.checkIn = checkIn.toISOString(); created.j.booking.checkOut = checkOut.toISOString()
+}
+
 async function verifyHostForPublishing() {
   await call('PATCH', '/api/me/id-document', H, { fileBase64: 'ZmFrZQ==', mimeType: 'image/png' })
   await call('PATCH', `/api/admin/review-queue/iddocument/${host.id}`, A, { decision: 'APPROVE' })
@@ -91,7 +102,8 @@ async function makeBooking(listingId) {
   const checkInDaysAgo = -bookingDateCursor
   const checkOutDaysAgo = -(bookingDateCursor + 2)
   bookingDateCursor += 3
-  const created = await call('POST', '/api/bookings', G, { listingId, checkIn: daysAgoIso(checkInDaysAgo), checkOut: daysAgoIso(checkOutDaysAgo) })
+  const created = await call('POST', '/api/bookings', G, { listingId, checkIn: bookableIso(checkInDaysAgo), checkOut: bookableIso(checkOutDaysAgo) })
+  await restorePastDates(created, checkInDaysAgo, checkOutDaysAgo)
   return created.j?.booking
 }
 async function payAndApprove(bookingId) {
@@ -166,6 +178,10 @@ async function main() {
   {
     const booking = await makeBooking(reviewableListingId)
     const { proofId, amountMinor } = await payAndApprove(booking.id)
+    // Since owner decisions 2026-10-22/23 an approved payment confirms the booking at once, so a
+    // paid booking still REQUESTED only exists in older data. Recreate that state to keep testing
+    // the admin-reject refund path for it.
+    await db().booking.update({ where: { id: booking.id }, data: { status: 'REQUESTED' } })
     const reject = await call('PATCH', `/api/admin/review-queue/booking/${booking.id}`, A, { decision: 'REJECT' })
     check('admin-reject: booking transitioned to CANCELLED', reject.status === 200 && reject.j?.entity?.status === 'CANCELLED', JSON.stringify(reject.j))
 
@@ -220,6 +236,7 @@ async function main() {
   {
     const booking = await makeBooking(reviewableListingId)
     const { proofId } = await payAndApprove(booking.id)
+    await db().booking.update({ where: { id: booking.id }, data: { status: 'REQUESTED' } }) // legacy paid-REQUESTED state, see above
     const [r1, r2] = await Promise.all([
       call('PATCH', `/api/admin/review-queue/booking/${booking.id}`, A, { decision: 'REJECT' }),
       call('PATCH', `/api/admin/review-queue/booking/${booking.id}`, A, { decision: 'REJECT' }),

@@ -6,7 +6,7 @@
 //
 // Proves, through the real HTTP API + real ledger rows:
 //   1. GET /api/bookings/quote -- nights, stay, fees, protection = 3% of the FULL stay, total,
-//      commission = 12% of (total - protection), host share; bookable flags.
+//      commission = 15% of (total - protection), host share; bookable flags.
 //   2. Demo listing -> 409 LISTING_NOT_BOOKABLE; own listing -> 409 OWN_LISTING.
 //   3. Booking -> manual proof -> admin approve -> host accept -> guest cancel-quote & cancel inside
 //      72h (HALF rule) -> admin finalize + execute refund -> every ledger leg exact, and
@@ -22,6 +22,7 @@
 // + its operation flags + PAYMENT_POLICY_TEST_COUNTRY_ELIGIBLE), and DATABASE_URL + SYBNB_COUNTRY in
 // this process's env. Run: node tests/e2e/booking-money-flow.e2e.mjs
 
+import { STR_COMMISSION_RATE as RATE } from '../../server/lib/booking-policy.mjs' // 15% since owner decision 2026-10-09
 import { randomUUID } from 'node:crypto'
 import { createSessionToken } from './_session.mjs'
 import { db, disconnectDb } from '../../server/lib/prisma.mjs'
@@ -126,7 +127,7 @@ async function main() {
   check('quote: protection = 3% of the FULL stay (not one night)', q?.protectionMinor === Math.round(3 * PRICE * 0.03), q)
   check('quote: cleaning 5% / taxes 2% fallback for a listing with no explicit fees', q?.cleaningMinor === 15_000 && q?.taxesMinor === 6_000 && q?.otherFeesMinor === 0, q)
   check('quote: total = stay + cleaning + taxes + other + protection', q?.totalMinor === q?.stayMinor + q?.cleaningMinor + q?.taxesMinor + q?.otherFeesMinor + q?.protectionMinor, q)
-  check('quote: commission = 12% of (total - protection); host share = remainder', q?.commissionMinor === Math.round((q?.totalMinor - q?.protectionMinor) * 0.12) && q?.commissionMinor + q?.hostShareMinor === q?.totalMinor - q?.protectionMinor, q)
+  check('quote: commission = 15% of (total - protection); host share = remainder', q?.commissionMinor === Math.round((q?.totalMinor - q?.protectionMinor) * RATE) && q?.commissionMinor + q?.hostShareMinor === q?.totalMinor - q?.protectionMinor, q)
   check('quote: bookable, SYP', q?.bookable === true && q?.currency === 'SYP' && !q?.reason, q)
   const q0 = (await call('GET', `/api/bookings/quote?listingId=${listing.id}&checkIn=${qIn}&checkOut=${qOut}&protection=0`, null)).j?.quote
   check('quote: protection=0 -> no protection fee, total lower by exactly that fee', q0?.protectionMinor === 0 && q0?.totalMinor === q?.totalMinor - q?.protectionMinor, q0)
@@ -162,15 +163,16 @@ async function main() {
   const { approve, proofId, amountMinor: paid } = await payAndApprove(guest, admin, booking.id)
   check('proof amount == the quoted guest total (single source of truth)', paid === mainQuote?.totalMinor, { paid, quoted: mainQuote?.totalMinor })
   check('admin approves the proof (200)', approve.status === 200, approve)
-  const A = Math.round(paid * 0.12)
+  const A = Math.round(paid * RATE)
   const Hg = paid - A
   const adminShare = await entries(booking.id, 'booking_admin_share', 'CREDIT')
   const hostHold = await entries(booking.id, 'booking_payout', 'HOLD')
-  check('approval: SYBNB commission CREDIT = 12% of paid', sum(adminShare) === A, { got: sum(adminShare), A })
-  check('approval: host HOLD = 88% of paid', sum(hostHold) === Hg, { got: sum(hostHold), Hg })
+  check('approval: SYBNB commission CREDIT = 15% of paid', sum(adminShare) === A, { got: sum(adminShare), A })
+  check('approval: host HOLD = 85% of paid', sum(hostHold) === Hg, { got: sum(hostHold), Hg })
 
-  const accept = await call('PATCH', `/api/host/requests/${booking.id}`, host.token, { decision: 'CONFIRM', acceptedTerms: true })
-  check('host accepts (CONFIRMED)', accept.status === 200 && accept.j?.booking?.status === 'CONFIRMED', accept)
+  // Owner decisions 2026-10-22/23: an approved payment confirms the booking directly (no host-accept step).
+  const confirmed = await db().booking.findUnique({ where: { id: booking.id }, select: { status: true } })
+  check('approved payment confirms the booking (CONFIRMED, no host step)', confirmed?.status === 'CONFIRMED', confirmed)
 
   const cq = await call('GET', `/api/bookings/${booking.id}/cancel-quote`, guest.token)
   const expectedRefund = Math.round(paid / 2)
@@ -190,12 +192,12 @@ async function main() {
   const finalize = await call('PATCH', `/api/admin/bookings/${booking.id}/finalize-cancellation`, admin.token, {})
   check('admin finalize: 200, rule HALF, no guest fee', finalize.status === 200 && finalize.j?.rule === 'HALF' && finalize.j?.feeCharged === false, finalize)
   const retained = paid - expectedRefund
-  const c = Math.round(retained * 0.12)
+  const c = Math.round(retained * RATE)
   const h = retained - c
   const reversal = await entries(booking.id, 'booking_admin_share_reversal', 'DEBIT')
   const hostRelease = await entries(booking.id, 'booking_payout', 'RELEASE')
-  check('finalize: commission reversed only for the refunded part (A - 12% of retained)', sum(reversal) === A - c, { got: sum(reversal), expected: A - c })
-  check('finalize: host share of the retained amount (88%) RELEASED to the host', sum(hostRelease) === h, { got: sum(hostRelease), expected: h })
+  check('finalize: commission reversed only for the refunded part (A - 15% of retained)', sum(reversal) === A - c, { got: sum(reversal), expected: A - c })
+  check('finalize: host share of the retained amount (85%) RELEASED to the host', sum(hostRelease) === h, { got: sum(hostRelease), expected: h })
   check('finalize: no guest cancellation fee', (await entries(booking.id, 'booking_guest_cancel_fee')).length === 0, 'fee entry exists')
 
   const execute = await call('PATCH', `/api/admin/refunds/${refund.id}/execute`, admin.token, {})
@@ -208,8 +210,8 @@ async function main() {
   const adminDelta = (await walletBalance(revenueUserId)) - adminBefore
   const hostDelta = (await walletBalance(host.id)) - hostBefore
   const guestDelta = (await walletBalance(guest.id)) - guestBefore
-  check('balances: SYBNB keeps exactly 12% of the retained amount', adminDelta === c, { adminDelta, c })
-  check('balances: host keeps exactly 88% of the retained amount', hostDelta === h, { hostDelta, h })
+  check('balances: SYBNB keeps exactly 15% of the retained amount', adminDelta === c, { adminDelta, c })
+  check('balances: host keeps exactly 85% of the retained amount', hostDelta === h, { hostDelta, h })
   check('balances: guest wallet got exactly the refund', guestDelta === expectedRefund, { guestDelta, expectedRefund })
   check('conservation: refund + SYBNB kept + host kept == amount paid', guestDelta + adminDelta + hostDelta === paid, { guestDelta, adminDelta, hostDelta, paid })
 
@@ -231,7 +233,7 @@ async function main() {
   check('host decline: refund request = 100% of paid incl. protection', pRefund?.amountMinor === p.amountMinor, pRefund)
   const pFinalize = await call('PATCH', `/api/admin/bookings/${pBooking.id}/finalize-cancellation`, admin.token, {})
   check('finalize (host decline): 200, cancelledBy HOST', pFinalize.status === 200 && pFinalize.j?.cancelledBy === 'HOST' && pFinalize.j?.rule === 'FULL', pFinalize)
-  const pA = Math.round((p.amountMinor - F) * 0.12)
+  const pA = Math.round((p.amountMinor - F) * RATE)
   check('finalize (host decline): full commission reversed', sum(await entries(pBooking.id, 'booking_admin_share_reversal', 'DEBIT')) === pA, sum(await entries(pBooking.id, 'booking_admin_share_reversal', 'DEBIT')))
   check('finalize (host decline): protection-fee credit reversed', sum(await entries(pBooking.id, 'booking_protection_fee_reversal', 'DEBIT')) === F, sum(await entries(pBooking.id, 'booking_protection_fee_reversal', 'DEBIT')))
   check('finalize (host decline): host gets nothing released', (await entries(pBooking.id, 'booking_payout', 'RELEASE')).length === 0, 'release exists')

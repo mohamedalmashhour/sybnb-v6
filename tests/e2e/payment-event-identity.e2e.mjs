@@ -107,6 +107,17 @@ async function stripeWebhook(eventObj, { secret = STRIPE_SECRET } = {}) {
 }
 function daysAgoIso(n) { return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString() }
 
+// The API refuses check-in dates in the past (BOOKING_DATES_IN_PAST). Suites that need a stay in the
+// past book the same-length window ~1000 days ahead, then move the stored dates back.
+function bookableIso(n) { return daysAgoIso(n > 0 ? n - 1000 : n) }
+async function restorePastDates(created, inDaysAgo, outDaysAgo) {
+  const id = created?.j?.booking?.id
+  if (!id || !(inDaysAgo > 0)) return
+  const checkIn = new Date(daysAgoIso(inDaysAgo)), checkOut = new Date(daysAgoIso(outDaysAgo))
+  await db().booking.update({ where: { id }, data: { checkIn, checkOut } })
+  created.j.booking.checkIn = checkIn.toISOString(); created.j.booking.checkOut = checkOut.toISOString()
+}
+
 async function verifyHostForPublishing() {
   await call('PATCH', '/api/me/id-document', H, { fileBase64: 'ZmFrZQ==', mimeType: 'image/png' })
   await call('PATCH', `/api/admin/review-queue/iddocument/${host.id}`, A, { decision: 'APPROVE' })
@@ -126,7 +137,8 @@ async function makeStaysListing(priceMinor) {
   return id
 }
 async function makeBooking(listingId, checkInDaysAgo, checkOutDaysAgo) {
-  const created = await call('POST', '/api/bookings', G, { listingId, checkIn: daysAgoIso(checkInDaysAgo), checkOut: daysAgoIso(checkOutDaysAgo) })
+  const created = await call('POST', '/api/bookings', G, { listingId, checkIn: bookableIso(checkInDaysAgo), checkOut: bookableIso(checkOutDaysAgo) })
+  await restorePastDates(created, checkInDaysAgo, checkOutDaysAgo)
   return created.j?.booking
 }
 

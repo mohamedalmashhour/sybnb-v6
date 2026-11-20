@@ -25,7 +25,7 @@ async function approvePlan(token, user) {
   // single sticky sellerProfile.documentStatus flag with no regard for which plan actually earned
   // it. A real audit found that let an advertising payment unlock dealer inventory; the fix checks
   // for a specifically dealer-tier (plus/premium) APPROVED payment, so this fixture must use one.
-  const proof = await call('POST','/api/payments/seller-plan-proof', token, {planCode:'plus', amountMinor:2000, currency:'USD', providerRef:ref, legalName:'Dealer', sellerType:'dealer'})
+  const proof = await call('POST','/api/payments/seller-plan-proof', token, {planCode:'plus', amountMinor:1900, currency:'USD', providerRef:ref, legalName:'Dealer', sellerType:'dealer'})
   await call('PATCH', `/api/admin/review-queue/payment/${proof.j?.proof?.id}`, A, {decision:'APPROVE'})
 }
 async function makeCar(token, attrs, price, title) {

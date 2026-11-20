@@ -18,7 +18,7 @@ function check(label, cond, detail) { if (cond) { pass++; console.log(`   PASS  
 const code = r => r.j?.error?.code || r.j?.code
 async function approvePlan(token, plan) {
   const ref = 'SELL-' + Math.floor(performance.now()*1000)
-  const p = await call('POST','/api/payments/seller-plan-proof', token, {planCode:plan, amountMinor:2500, currency:'USD', providerRef:ref, legalName:'Merchant', sellerType:'dealer'})
+  const p = await call('POST','/api/payments/seller-plan-proof', token, {planCode:plan, amountMinor:plan === 'premium' ? 4900 : 1900, currency:'USD', providerRef:ref, legalName:'Merchant', sellerType:'dealer'})
   const r = await call('PATCH', `/api/admin/review-queue/payment/${p.j?.proof?.id}`, A, {decision:'APPROVE'})
   return { proofStatus: p.status, approveStatus: r.status }
 }

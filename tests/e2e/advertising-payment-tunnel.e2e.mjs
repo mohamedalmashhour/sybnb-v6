@@ -245,7 +245,7 @@ const newConstructionReal = await call('POST','/api/listings', AA, { division:'N
 check('advertising-only entitlement does NOT unlock a real NEW_CONSTRUCTION listing (403 SELLER_PLAN_REQUIRED)', newConstructionReal.status === 403 && code(newConstructionReal) === 'SELLER_PLAN_REQUIRED', newConstructionReal.status+' '+code(newConstructionReal))
 // The converse also holds -- a real dealer-tier payment (planCode 'plus') does NOT unlock advertising.
 const dealerRef = 'DEALER7-' + Math.floor(performance.now()*1000)
-const dealerProof = await call('POST','/api/payments/seller-plan-proof', AA, {planCode:'plus', amountMinor:2000, currency:'USD', providerRef:dealerRef, legalName:'AA Dealer', sellerType:'dealer'})
+const dealerProof = await call('POST','/api/payments/seller-plan-proof', AA, {planCode:'plus', amountMinor:1900, currency:'USD', providerRef:dealerRef, legalName:'AA Dealer', sellerType:'dealer'})
 await call('PATCH', `/api/admin/review-queue/payment/${dealerProof.j?.proof?.id}`, A, {decision:'APPROVE'})
 const carsRealWithDealerPlan = await call('POST','/api/listings', AA, { division:'CARS', titleAr:'Real BMW listing 2', priceMinor:500000000, currency:'SYP', metadata:{ visualFilters:{ carBrand:'bmw' } } })
 check('a genuine dealer-tier payment correctly DOES unlock real CARS inventory (201)', carsRealWithDealerPlan.status === 201, carsRealWithDealerPlan.status+' '+code(carsRealWithDealerPlan))
@@ -266,7 +266,7 @@ console.log('\n=== 7d. ADMIN SELF-REVIEW IS FORBIDDEN ===')
 // which needs no extra role fixture (submitting a seller-plan-proof only requires any authenticated
 // user, per server/routes/payments.mjs's requireAuth(context)).
 const selfRef = 'SELF7-' + Math.floor(performance.now()*1000)
-const selfProof = await call('POST','/api/payments/seller-plan-proof', A, {planCode:'plus', amountMinor:2000, currency:'USD', providerRef:selfRef, legalName:'Admin Self', sellerType:'dealer'})
+const selfProof = await call('POST','/api/payments/seller-plan-proof', A, {planCode:'plus', amountMinor:1900, currency:'USD', providerRef:selfRef, legalName:'Admin Self', sellerType:'dealer'})
 check('admin can submit a payment proof under their own id (201)', selfProof.status === 201, selfProof.status)
 const selfApprove = await call('PATCH', `/api/admin/review-queue/payment/${selfProof.j?.proof?.id}`, A, {decision:'APPROVE'})
 check('admin cannot approve their OWN payment proof (403 SELF_REVIEW_FORBIDDEN)', selfApprove.status === 403 && code(selfApprove) === 'SELF_REVIEW_FORBIDDEN', selfApprove.status+' '+code(selfApprove))

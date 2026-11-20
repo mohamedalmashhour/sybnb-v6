@@ -73,6 +73,17 @@ async function call(method, path, token, body) {
 const code = (r) => r.j?.error?.code || r.j?.code
 function daysAgoIso(n) { return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString() }
 
+// The API refuses check-in dates in the past (BOOKING_DATES_IN_PAST). Suites that need a stay in the
+// past book the same-length window ~1000 days ahead, then move the stored dates back.
+function bookableIso(n) { return daysAgoIso(n > 0 ? n - 1000 : n) }
+async function restorePastDates(created, inDaysAgo, outDaysAgo) {
+  const id = created?.j?.booking?.id
+  if (!id || !(inDaysAgo > 0)) return
+  const checkIn = new Date(daysAgoIso(inDaysAgo)), checkOut = new Date(daysAgoIso(outDaysAgo))
+  await db().booking.update({ where: { id }, data: { checkIn, checkOut } })
+  created.j.booking.checkIn = checkIn.toISOString(); created.j.booking.checkOut = checkOut.toISOString()
+}
+
 async function verifyHostForPublishing() {
   await call('PATCH', '/api/me/id-document', H, { fileBase64: 'ZmFrZQ==', mimeType: 'image/png' })
   await call('PATCH', `/api/admin/review-queue/iddocument/${host.id}`, A, { decision: 'APPROVE' })
@@ -97,9 +108,10 @@ async function makeBooking(listingId, opts = {}) {
   const checkOutDaysAgo = -(bookingDateCursor + 2)
   bookingDateCursor += 3
   const created = await call('POST', '/api/bookings', G, {
-    listingId, checkIn: daysAgoIso(checkInDaysAgo), checkOut: daysAgoIso(checkOutDaysAgo),
+    listingId, checkIn: bookableIso(checkInDaysAgo), checkOut: bookableIso(checkOutDaysAgo),
     ...(opts.protection ? { cancellationProtectionPurchased: true } : {}),
   })
+  await restorePastDates(created, checkInDaysAgo, checkOutDaysAgo)
   return created.j?.booking
 }
 async function payAndApprove(bookingId) {
@@ -157,6 +169,15 @@ async function main() {
     const expectedSplit = bookingFinanceSplit(fresh, amountMinor)
     const expectedFee = cancellationAdminFee(fresh.currency)
 
+    // The host cancellation fee is debited from the host's AVAILABLE wallet balance (the stay money is
+    // only on HOLD). On a fresh test database the fixture host has 0, so fund it like the gift
+    // fixture is funded in scripts/run-all-e2e.sh -- the suite used to rely on balance left over
+    // from earlier runs.
+    await db().wallet.upsert({
+      where: { userId_currency: { userId: fresh.listing.ownerId, currency: fresh.currency } },
+      create: { userId: fresh.listing.ownerId, currency: fresh.currency, cachedBalanceMinor: 1_000_000 },
+      update: { cachedBalanceMinor: { increment: 1_000_000 } },
+    })
     const finalize = await call('PATCH', `/api/admin/bookings/${booking.id}/finalize-cancellation`, A, {})
     check('finalize (host-cancel): admin succeeds (200), cancelledBy=HOST', finalize.status === 200 && finalize.j?.cancelledBy === 'HOST', JSON.stringify(finalize.j))
     const reversal = await db().walletEntry.findFirst({ where: { referenceId: booking.id, referenceType: 'booking_admin_share_reversal', type: 'DEBIT' } })

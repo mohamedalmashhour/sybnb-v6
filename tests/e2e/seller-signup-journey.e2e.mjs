@@ -18,7 +18,7 @@ execSync(`npx esbuild ${join(root, 'src/shared/api/platformApi.ts')} --bundle --
 const store = new Map()
 globalThis.sessionStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k), key: (i) => [...store.keys()][i] ?? null, get length() { return store.size } }
 globalThis.localStorage = globalThis.sessionStorage
-globalThis.window = globalThis.window || { location: { hash: '' } }
+globalThis.window = globalThis.window || { location: { hash: '' }, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => {} }
 
 const api = await import(out)
 let pass = 0, fail = 0

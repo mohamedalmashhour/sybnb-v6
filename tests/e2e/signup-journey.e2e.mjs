@@ -26,7 +26,7 @@ globalThis.sessionStorage = {
   key: (i) => [...store.keys()][i] ?? null,
   get length() { return store.size },
 }
-globalThis.window = globalThis.window || { location: { hash: '' } }
+globalThis.window = globalThis.window || { location: { hash: '' }, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => {} }
 
 const api = await import(out)
 let pass = 0, fail = 0
