@@ -249,8 +249,10 @@ console.log('\n=== 5. THE 4 MONEY-MOVING ENDPOINTS OUTSIDE THE REVIEW-QUEUE SYST
   const secondListingId = secondListing.j?.listing?.id
   await call('PATCH', `/api/listings/${secondListingId}/submit`, H)
   await call('PATCH', `/api/admin/review-queue/listing/${secondListingId}`, A2, { decision: 'APPROVED' })
-  const checkIn = new Date(Date.now() - 5 * 86400000).toISOString()
-  const checkOut = new Date(Date.now() - 3 * 86400000).toISOString()
+  // Future dates: the API refuses a past check-in (BOOKING_DATES_IN_PAST), and a guest can only
+  // cancel a stay that has not ended.
+  const checkIn = new Date(Date.now() + 40 * 86400000).toISOString()
+  const checkOut = new Date(Date.now() + 42 * 86400000).toISOString()
   const refundBooking = await call('POST', '/api/bookings', AG, { listingId: secondListingId, checkIn, checkOut })
   const refundBookingId = refundBooking.j?.booking?.id
   const refundProof = await call('POST', '/api/payments/local-wallet-proof', AG, { bookingId: refundBookingId, providerRef: 'REFUND-SELF-' + Date.now() })
@@ -260,7 +262,7 @@ console.log('\n=== 5. THE 4 MONEY-MOVING ENDPOINTS OUTSIDE THE REVIEW-QUEUE SYST
   })
   await call('PATCH', `/api/bookings/${refundBookingId}/cancel`, AG, {})
   await call('PATCH', `/api/admin/bookings/${refundBookingId}/finalize-cancellation`, A2, {})
-  const refund = await db().refund.findFirst({ where: { paymentProofId: refundProof.j?.proof?.id } })
+  const refund = refundProof.j?.proof?.id ? await db().refund.findFirst({ where: { paymentProofId: refundProof.j.proof.id } }) : null
   const selfExecute = await call('PATCH', `/api/admin/refunds/${refund.id}/execute`, AG, {})
   check('admin cannot execute a refund that credits their OWN wallet (403 SELF_REVIEW_FORBIDDEN)', selfExecute.status === 403 && code(selfExecute) === 'SELF_REVIEW_FORBIDDEN', selfExecute.status + ' ' + code(selfExecute))
   const refundBeforeDiffAdmin = await db().refund.findUnique({ where: { id: refund.id }, select: { status: true } })

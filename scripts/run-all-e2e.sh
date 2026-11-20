@@ -101,7 +101,8 @@ verify_host_fixtures() {
 verify_host_fixtures
 
 fund_gift_fixture() {
-  psql -d sybnb_v6 -tAc "UPDATE wallets SET cached_balance_minor = 50000000 WHERE user_id='$SELLER1' AND currency='SYP';" >/dev/null 2>&1
+  # Upsert: on a fresh database (CI, a new local DB) the fixture has no SYP wallet row yet.
+  psql -d sybnb_v6 -tAc "INSERT INTO wallets (id, user_id, currency, cached_balance_minor, created_at, updated_at) VALUES (gen_random_uuid(), '$SELLER1', 'SYP', 50000000, now(), now()) ON CONFLICT (user_id, currency) DO UPDATE SET cached_balance_minor = 50000000;" >/dev/null 2>&1
 }
 
 echo "== build + schema =="

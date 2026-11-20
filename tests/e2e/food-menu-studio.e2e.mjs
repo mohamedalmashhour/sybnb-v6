@@ -76,8 +76,8 @@ async function cleanup() {
   if (!all.length) return
   await db().foodOrder.deleteMany({ where: { OR: [{ customerId: { in: all } }, { courierId: { in: all } }, { merchant: { ownerId: { in: all } } }] } })
   await db().merchant.deleteMany({ where: { ownerId: { in: all } } })
-  await db().adminAuditLog.deleteMany({ where: { actorUserId: { in: all } } })
-  await db().adminAuditLog.deleteMany({ where: { entityType: 'user', entityId: { in: all } } })
+  await db().adminAuditLog.deleteMany({ where: { actorUserId: { in: all } } }).catch(() => {}) /* audit log is append-only (migration 071) */
+  await db().adminAuditLog.deleteMany({ where: { entityType: 'user', entityId: { in: all } } }).catch(() => {}) /* audit log is append-only (migration 071) */
   await db().user.deleteMany({ where: { id: { in: all } } })
 }
 

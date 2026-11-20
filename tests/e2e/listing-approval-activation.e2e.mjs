@@ -153,7 +153,8 @@ async function main() {
   // interfere with the activation-code counts asserted below.
   const parkReject = await call('PATCH', `/api/admin/review-queue/listings/${noId.id}`, admin.token, { decision: 'REJECT', adminNote: 'parked by e2e' })
   check('REJECT (send back) is allowed while the ID is unapproved', parkReject.status === 200 && parkReject.j?.entity?.status === 'REJECTED', parkReject)
-  await db().listing.update({ where: { id: noId.id }, data: { status: 'PAUSED' } }) // out of the tracker counts
+  // REMOVED (not PAUSED): the tracker counts a PAUSED listing as once-approved (host-verification.mjs).
+  await db().listing.update({ where: { id: noId.id }, data: { status: 'REMOVED' } }) // out of the tracker counts
   const idApprove = await call('PATCH', `/api/admin/review-queue/iddocuments/${host.id}`, admin.token, { decision: 'APPROVE' })
   check('admin approves the host ID from the review queue -> 200 APPROVED', idApprove.status === 200 && idApprove.j?.entity?.idDocumentStatus === 'APPROVED', idApprove)
   check('ID approval is audited', Boolean(await db().adminAuditLog.findFirst({ where: { entityId: host.id, action: 'REVIEW_APPROVED' } })), 'missing')

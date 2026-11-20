@@ -61,8 +61,8 @@ async function cleanup() {
     await db().rideRequest.deleteMany({ where: { id: { in: rideIds } } })
   }
   // PUT /api/driver/vehicle (checks 5a/5b) writes admin audit rows with the driver as actor.
-  await db().adminAuditLog.deleteMany({ where: { actorUserId: { in: all } } })
-  await db().adminAuditLog.deleteMany({ where: { entityType: 'user', entityId: { in: all } } })
+  await db().adminAuditLog.deleteMany({ where: { actorUserId: { in: all } } }).catch(() => {}) /* audit log is append-only (migration 071) */
+  await db().adminAuditLog.deleteMany({ where: { entityType: 'user', entityId: { in: all } } }).catch(() => {}) /* audit log is append-only (migration 071) */
   await db().user.deleteMany({ where: { id: { in: all } } })
 }
 

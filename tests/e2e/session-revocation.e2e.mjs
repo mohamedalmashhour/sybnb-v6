@@ -56,9 +56,11 @@ async function makeUser(id, email, roles) {
 }
 async function cleanup() {
   const all = Object.values(ids)
-  await db().adminAuditLog.deleteMany({ where: { actorUserId: { in: all } } })
-  await db().adminAuditLog.deleteMany({ where: { entityType: 'user', entityId: { in: all } } })
-  await db().user.deleteMany({ where: { id: { in: all } } })
+  await db().adminAuditLog.deleteMany({ where: { actorUserId: { in: all } } }).catch(() => {}) /* audit log is append-only (migration 071) */
+  await db().adminAuditLog.deleteMany({ where: { entityType: 'user', entityId: { in: all } } }).catch(() => {}) /* audit log is append-only (migration 071) */
+  // Users with admin-audit history cannot be deleted (append-only audit + FK); ids/emails are unique
+  // per run, so leftovers are harmless.
+  await db().user.deleteMany({ where: { id: { in: all } } }).catch(() => {})
 }
 await cleanup()
 await makeUser(ids.subject, emails.subject, ['ADMIN', 'GUEST'])
