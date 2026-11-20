@@ -55,6 +55,11 @@ export function toCapsuleProfile(base) {
     // Revenu Québec: keep a copy of every ride bill (completed rides and charged cancellations) for six
     // years after the end of the year — written to ride_tax_records (append-only).
     keepTaxRecords: true,
+    // Operating model (owner 2026-11-20): a ride APP like Uber/Lyft, i.e. a transportation system
+    // operator UNDER AGREEMENT with Revenu Québec — NOT a taxi business. Taxi mandatory billing
+    // (SRS / MEV equipment, per-trip data to the WEB-SRM) does not apply. The operator collects the
+    // GST/QST and the $0.90 dues, files the returns, remits them, and gives drivers period totals.
+    operatingModel: 'OPERATOR_UNDER_AGREEMENT',
     cancellation: { graceSeconds: 120, feePercent: 15, noShowPercent: 100, waitMinutes: 5, arrivalRadiusM: 300, minFeeMinor: 0 },
   },
 })
