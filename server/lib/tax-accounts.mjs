@@ -69,3 +69,44 @@ export async function recordRemittance(tx, { country, timezone = 'UTC', account,
   await tx.taxCollection.updateMany({ where: { id: { in: ids.map((r) => r.id) }, remittanceId: null }, data: { remittanceId: remittance.id } })
   return remittance
 }
+
+// ---- Ride tax records (permanent bill copies) ----------------------------------------------------
+// Revenu Québec: keep a copy of every bill, six years after the end of the last year it covers.
+export function retainUntilFor(at = new Date(), years = 6) {
+  return new Date(Date.UTC(new Date(at).getUTCFullYear() + years, 11, 31))
+}
+
+// Write the permanent record for a ride (COMPLETED or CANCELLATION), only for countries whose
+// settings say rides keep tax records. Idempotent per (ride, kind). Names and tax numbers are
+// snapshotted so the record survives later account changes or deletion.
+export async function issueRideTaxRecord(tx, { ride, kind, profile, driverPayoutMinor = 0, platformCommissionMinor = 0, cancellationFeeMinor = 0, feeTaxes = [] }) {
+  if (!profile?.rides?.keepTaxRecords) return null
+  const existing = await tx.rideTaxRecord.findUnique({ where: { rideId_kind: { rideId: ride.id, kind } } })
+  if (existing) return existing
+  const gc = ride.metadata?.governmentCharges || {}
+  const taxes = kind === 'COMPLETED' ? gc.taxes || [] : feeTaxes
+  const tax = (code) => taxes.find((t) => t.code === code)?.minor || 0
+  const [driver, rider, driverProfile] = await Promise.all([
+    ride.driverId ? tx.user.findUnique({ where: { id: ride.driverId }, select: { displayName: true } }) : null,
+    tx.user.findUnique({ where: { id: ride.riderId }, select: { displayName: true } }),
+    ride.driverId ? tx.driverProfile.findUnique({ where: { userId: ride.driverId }, select: { salesTaxNumbers: true } }) : null,
+  ])
+  const fare = kind === 'COMPLETED' ? Math.round(ride.fareMinor || 0) : 0
+  const dues = kind === 'COMPLETED' ? gc.duesMinor || 0 : 0
+  const fee = kind === 'CANCELLATION' ? cancellationFeeMinor : 0
+  const now = new Date()
+  return tx.rideTaxRecord.create({
+    data: {
+      country: profile.key, kind, rideId: ride.id,
+      driverId: ride.driverId || null, driverName: driver?.displayName || null,
+      driverGstNumber: driverProfile?.salesTaxNumbers?.gst || null, driverQstNumber: driverProfile?.salesTaxNumbers?.qst || null,
+      riderId: ride.riderId, riderName: rider?.displayName || null,
+      currency: ride.currency, fareMinor: fare, cancellationFeeMinor: fee, duesMinor: dues,
+      gstMinor: tax('GST'), qstMinor: tax('QST'),
+      totalMinor: fare + fee + dues + tax('GST') + tax('QST'),
+      driverPayoutMinor, platformCommissionMinor,
+      trip: { pickup: ride.metadata?.pickup || null, dropoff: ride.metadata?.dropoff || null, distanceKm: ride.metadata?.distanceKm ?? null, category: ride.metadata?.category || null, requestedAt: ride.requestedAt || null },
+      issuedAt: now, retainUntil: retainUntilFor(now),
+    },
+  })
+}

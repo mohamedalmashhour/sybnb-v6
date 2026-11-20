@@ -53,7 +53,7 @@ import { handleSrRides } from './routes/sr-rides.mjs'
 import { handleFood } from './routes/food.mjs'
 import { handleWallet } from './routes/wallet.mjs'
 import { handleCrm } from './routes/crm.mjs'
-import { handleTaxAccounts } from './routes/tax-accounts.mjs'
+import { handleTaxAccounts, handleRideTaxRecords } from './routes/tax-accounts.mjs'
 import { handleCeo } from './routes/ceo.mjs'
 import { activateScheduledRides } from './lib/ride-schedule.mjs'
 import { runDispatchSweep, dispatchStats } from './lib/ride-dispatch.mjs'
@@ -361,6 +361,7 @@ async function dispatch(req, res, url, context) {
     handleDriverBase,
     handleCrm,
     handleTaxAccounts,
+    handleRideTaxRecords,
     handleCeo,
     handleAdmin2,
     handleAdmin,

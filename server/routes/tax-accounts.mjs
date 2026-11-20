@@ -46,3 +46,49 @@ export async function handleTaxAccounts(req, res, url, context) {
   }
   return false
 }
+
+// ---- Ride tax records: lists for the accounting department and Revenu Québec reviews -------------
+const CSV_COLS = ['issuedAt', 'kind', 'rideId', 'driverId', 'driverName', 'driverGstNumber', 'driverQstNumber', 'riderId', 'riderName', 'currency', 'fareMinor', 'cancellationFeeMinor', 'duesMinor', 'gstMinor', 'qstMinor', 'totalMinor', 'driverPayoutMinor', 'platformCommissionMinor', 'retainUntil']
+const csvCell = (v) => { const s = v instanceof Date ? v.toISOString() : v == null ? '' : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s }
+
+export async function handleRideTaxRecords(req, res, url, context) {
+  if (url.pathname === '/api/admin/ride-tax-records') {
+    if (req.method !== 'GET') return methodNotAllowed(res, ['GET'])
+    requireAuth(context, ['ADMIN', 'SUPPORT'])
+    const kind = ['COMPLETED', 'CANCELLATION'].includes(url.searchParams.get('kind')) ? url.searchParams.get('kind') : undefined
+    const fromS = url.searchParams.get('from'), toS = url.searchParams.get('to')
+    const where = {
+      country: activeCountryKey(),
+      ...(kind ? { kind } : {}),
+      ...(url.searchParams.get('driverId') ? { driverId: url.searchParams.get('driverId') } : {}),
+      ...(url.searchParams.get('riderId') ? { riderId: url.searchParams.get('riderId') } : {}),
+      issuedAt: { gte: fromS && DATE.test(fromS) ? new Date(fromS + 'T00:00:00Z') : new Date(0), lt: toS && DATE.test(toS) ? new Date(new Date(toS + 'T00:00:00Z').getTime() + 86_400_000) : new Date(Date.now() + 86_400_000) },
+    }
+    const records = await db().rideTaxRecord.findMany({ where, orderBy: { issuedAt: 'asc' }, take: 10_000 })
+    if (url.searchParams.get('format') === 'csv') {
+      const body = [CSV_COLS.join(','), ...records.map((r) => CSV_COLS.map((c) => csvCell(r[c])).join(','))].join('\n')
+      res.writeHead(200, { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="ride-tax-records-${kind || 'all'}.csv"` })
+      res.end(body)
+      return true
+    }
+    const sum = (k) => records.reduce((a, r) => a + r[k], 0)
+    return json(res, 200, { ok: true, count: records.length, totals: { fareMinor: sum('fareMinor'), cancellationFeeMinor: sum('cancellationFeeMinor'), duesMinor: sum('duesMinor'), gstMinor: sum('gstMinor'), qstMinor: sum('qstMinor'), totalMinor: sum('totalMinor') }, records })
+  }
+
+  // Per-driver totals for a period: what Revenu Québec expects the platform to give each driver
+  // (amounts collected incl. taxes, GST and QST collected on the driver's behalf).
+  if (url.pathname === '/api/admin/ride-tax-records/drivers') {
+    if (req.method !== 'GET') return methodNotAllowed(res, ['GET'])
+    requireAuth(context, ['ADMIN', 'SUPPORT'])
+    const fromS = url.searchParams.get('from'), toS = url.searchParams.get('to')
+    if (!DATE.test(fromS || '') || !DATE.test(toS || '')) throw bad('PERIOD_INVALID', 'Give from and to as dates.')
+    const rows = await db().rideTaxRecord.groupBy({
+      by: ['driverId', 'driverName', 'driverGstNumber', 'driverQstNumber', 'currency'],
+      where: { country: activeCountryKey(), issuedAt: { gte: new Date(fromS + 'T00:00:00Z'), lt: new Date(new Date(toS + 'T00:00:00Z').getTime() + 86_400_000) } },
+      _sum: { fareMinor: true, cancellationFeeMinor: true, duesMinor: true, gstMinor: true, qstMinor: true, totalMinor: true, driverPayoutMinor: true },
+      _count: { _all: true },
+    })
+    return json(res, 200, { ok: true, period: { from: fromS, to: toS }, drivers: rows.map((r) => ({ driverId: r.driverId, driverName: r.driverName, gstNumber: r.driverGstNumber, qstNumber: r.driverQstNumber, currency: r.currency, records: r._count._all, ...Object.fromEntries(Object.entries(r._sum).map(([k, v]) => [k, v || 0])) })) })
+  }
+  return false
+}

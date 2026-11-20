@@ -52,6 +52,9 @@ export function toCapsuleProfile(base) {
     // number to the rider (so it need not be posted in the car).
     requiredDriverTaxNumbers: ['gst', 'qst'],
     market: QUEBEC_RIDE_MARKET,
+    // Revenu Québec: keep a copy of every ride bill (completed rides and charged cancellations) for six
+    // years after the end of the year — written to ride_tax_records (append-only).
+    keepTaxRecords: true,
     cancellation: { graceSeconds: 120, feePercent: 15, noShowPercent: 100, waitMinutes: 5, arrivalRadiusM: 300, minFeeMinor: 0 },
   },
 })

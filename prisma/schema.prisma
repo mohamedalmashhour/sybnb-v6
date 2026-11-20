@@ -3461,3 +3461,36 @@ model TaxRemittance {
 
   @@map("tax_remittances")
 }
+
+// Permanent copy of every ride bill where the country keeps tax records (Québec). Append-only (DB
+// trigger), kept at least 6 years after the end of the year (Revenu Québec). Owner 2026-11-20.
+model RideTaxRecord {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  country                 String
+  kind                    String
+  rideId                  String   @map("ride_id")
+  driverId                String?  @map("driver_id")
+  driverName              String?  @map("driver_name")
+  driverGstNumber         String?  @map("driver_gst_number")
+  driverQstNumber         String?  @map("driver_qst_number")
+  riderId                 String   @map("rider_id")
+  riderName               String?  @map("rider_name")
+  currency                String
+  fareMinor               Int      @default(0) @map("fare_minor")
+  cancellationFeeMinor    Int      @default(0) @map("cancellation_fee_minor")
+  duesMinor               Int      @default(0) @map("dues_minor")
+  gstMinor                Int      @default(0) @map("gst_minor")
+  qstMinor                Int      @default(0) @map("qst_minor")
+  totalMinor              Int      @map("total_minor")
+  driverPayoutMinor       Int      @default(0) @map("driver_payout_minor")
+  platformCommissionMinor Int      @default(0) @map("platform_commission_minor")
+  trip                    Json     @default("{}")
+  issuedAt                DateTime @default(now()) @map("issued_at") @db.Timestamptz(6)
+  retainUntil             DateTime @map("retain_until") @db.Date
+
+  @@unique([rideId, kind], map: "ride_tax_records_ride_kind_key")
+  @@index([country, issuedAt], map: "ride_tax_records_country_issued_idx")
+  @@index([driverId, issuedAt], map: "ride_tax_records_driver_idx")
+  @@index([riderId, issuedAt], map: "ride_tax_records_rider_idx")
+  @@map("ride_tax_records")
+}

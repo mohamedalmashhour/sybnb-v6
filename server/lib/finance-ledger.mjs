@@ -708,9 +708,11 @@ export async function settlePrepaidRide(tx, { ride }) {
   }
   // Government money (sales taxes, per-trip dues) collected with the prepayment: recorded in the
   // company's government accounts, never paid to the driver (owner decision 2026-11-20).
-  const { recordRideGovernmentCharges } = await import('./tax-accounts.mjs')
+  const { recordRideGovernmentCharges, issueRideTaxRecord } = await import('./tax-accounts.mjs')
   const { capsuleProfile } = await import('./capsule-profile.mjs')
   const gov = await recordRideGovernmentCharges(tx, { ride, country: capsuleProfile()?.key || 'none' })
+  // Permanent bill copy (driver + client) where the country keeps ride tax records (Québec).
+  await issueRideTaxRecord(tx, { ride, kind: 'COMPLETED', profile: capsuleProfile(), driverPayoutMinor: driverMinor, platformCommissionMinor: commissionMinor })
   return { settled: true, driverMinor, commissionMinor, governmentRecorded: gov.recorded }
 }
 
@@ -734,6 +736,12 @@ export async function refundPrepaidRide(tx, { ride }) {
       data: feeTaxes.map((t) => ({ country: capsuleProfile()?.key || 'none', account: t.account, taxCode: t.code, sourceType: 'ride_cancellation_fee', sourceId: ride.id, baseMinor: t.baseMinor, rateBp: t.rateBp, amountMinor: t.minor, currency: ride.currency })),
       skipDuplicates: true,
     })
+  }
+  if (feeMinor > 0) {
+    // Permanent record of a charged cancellation (driver + client) where the country keeps them.
+    const { issueRideTaxRecord } = await import('./tax-accounts.mjs')
+    const { capsuleProfile: cp } = await import('./capsule-profile.mjs')
+    await issueRideTaxRecord(tx, { ride, kind: 'CANCELLATION', profile: cp(), cancellationFeeMinor: feeMinor, feeTaxes, driverPayoutMinor: ride.driverId ? feeMinor : 0 })
   }
   if (riderRefundMinor > 0) {
     await recordWalletEntry(tx, {

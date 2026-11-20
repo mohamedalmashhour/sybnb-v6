@@ -131,6 +131,35 @@ async function main() {
   const feeToDriver = await db().walletEntry.findFirst({ where: { referenceType: 'ride_cancellation_fee', referenceId: ride2?.id } })
   check('driver receives the fee itself (taxes stay with the company)', feeToDriver?.amountMinor === fee, feeToDriver)
 
+  console.log('\n=== 6c. PERMANENT RECORDS FOR REVENU QUÉBEC (completed + cancellation lists) ===')
+  const recDone = await db().rideTaxRecord.findUnique({ where: { rideId_kind: { rideId: ride?.id, kind: 'COMPLETED' } } })
+  check('completed ride has a permanent record naming driver and client', recDone?.driverId === driver.id && recDone?.riderId === guest.id && recDone?.driverName && recDone?.riderName, recDone)
+  check('record carries the driver GST/QST numbers', recDone?.driverQstNumber === '1234567890 TQ0001' && recDone?.driverGstNumber === '123456789 RT0001', recDone)
+  check('record amounts = fare + dues + GST + QST', recDone?.totalMinor === recDone?.fareMinor + recDone?.duesMinor + recDone?.gstMinor + recDone?.qstMinor && recDone?.duesMinor === 90, recDone)
+  const y = new Date().getUTCFullYear()
+  check('kept until 31 Dec of year + 6 (Revenu Québec)', recDone && new Date(recDone.retainUntil).toISOString().slice(0, 10) === `${y + 6}-12-31`, recDone?.retainUntil)
+  const recCancel = await db().rideTaxRecord.findUnique({ where: { rideId_kind: { rideId: ride2?.id, kind: 'CANCELLATION' } } })
+  check('charged cancellation has its own record (fee + taxes, no dues)', recCancel?.cancellationFeeMinor > 0 && recCancel?.duesMinor === 0 && recCancel?.gstMinor > 0, recCancel)
+  let blocked = false
+  try { await db().rideTaxRecord.update({ where: { id: recDone.id }, data: { totalMinor: 1 } }) } catch { blocked = true }
+  check('records cannot be edited (append-only)', blocked, 'update allowed')
+  blocked = false
+  try { await db().rideTaxRecord.delete({ where: { id: recDone.id } }) } catch { blocked = true }
+  check('records cannot be deleted', blocked, 'delete allowed')
+  const listDone = await call('GET', '/api/admin/ride-tax-records?kind=COMPLETED', admin.token)
+  check('admin list of completed rides', listDone.status === 200 && listDone.j?.records?.some((r) => r.rideId === ride?.id), listDone.j?.count)
+  const listCancel = await call('GET', `/api/admin/ride-tax-records?kind=CANCELLATION&driverId=${driver.id}`, admin.token)
+  check('admin list of cancellations, filtered by driver', listCancel.status === 200 && listCancel.j?.records?.every((r) => r.kind === 'CANCELLATION' && r.driverId === driver.id) && listCancel.j.count >= 1, listCancel.j)
+  const byRider = await call('GET', `/api/admin/ride-tax-records?riderId=${guest.id}`, admin.token)
+  check('admin list filtered by client', byRider.j?.records?.length >= 2 && byRider.j.records.every((r) => r.riderId === guest.id), byRider.j?.count)
+  const csv = await fetch(`${API}/api/admin/ride-tax-records?format=csv`, { headers: { authorization: `Bearer ${admin.token}` } })
+  const csvText = await csv.text()
+  check('CSV export for Revenu Québec', csv.status === 200 && csvText.startsWith('issuedAt,kind,rideId,driverId,driverName') && csvText.includes(ride?.id), csvText.slice(0, 120))
+  const today2 = new Date().toISOString().slice(0, 10)
+  const perDriver = await call('GET', `/api/admin/ride-tax-records/drivers?from=${today2}&to=${today2}`, admin.token)
+  const mine = perDriver.j?.drivers?.find((d) => d.driverId === driver.id)
+  check('per-driver totals for the period (incl. GST/QST collected)', mine?.records >= 2 && mine?.gstMinor > 0 && mine?.qstMinor > 0 && mine?.qstNumber === '1234567890 TQ0001', perDriver.j)
+
   console.log('\n=== 7. DAILY / MONTHLY COLLECTION TOTALS AND PAYMENT TO THE GOVERNMENT ===')
   const daily = await call('GET', '/api/admin/tax-collections?group=day', admin.token)
   const tot = (acc) => daily.j?.totals?.find((t) => t.account === acc && t.currency === 'CAD')
