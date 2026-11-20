@@ -1,4 +1,5 @@
 import { capsuleProfile } from './capsule-profile.mjs'
+import { quoteStay } from '../../wrapping/stays/index.mjs'
 // SYBNB — pure booking money policy (owner decisions of 2026-10-08, see MONEY_SPEC decisions 3-6).
 //
 // PURE MODULE: no Prisma, no I/O, no process.env reads except through the explicit `env` argument of
@@ -36,10 +37,11 @@ export const SR_RIDE_COMMISSION_RATE = (() => {
   return Number.isFinite(raw) && raw >= 0 && raw < 1 ? raw : (capsuleProfile()?.rides.driverCommissionBp ?? 2000) / 10_000
 })()
 // Cancellation protection add-on: 3% of the FULL stay amount (all nights, before cleaning/taxes).
-export const PROTECTION_RATE = 0.03
+// Now a country setting in the capsule profile (Syria: 300 bp = 3%). Prices are variables (owner 2026-11-20).
+export const PROTECTION_RATE = (capsuleProfile()?.stays.protectionBp ?? 300) / 10_000
 // Fallback fee percentages for a STAYS listing with no explicit itemized fee set (pre-existing).
-export const STR_CLEANING_RATE = 0.05
-export const STR_TAX_RATE = 0.02
+export const STR_CLEANING_RATE = (capsuleProfile()?.stays.fallbackCleaningBp ?? 500) / 10_000
+export const STR_TAX_RATE = (capsuleProfile()?.stays.fallbackTaxBp ?? 200) / 10_000
 
 export const DEFAULT_BOOKING_POLICY = Object.freeze({
   timezoneOffsetMinutes: 0,
@@ -107,6 +109,27 @@ export function computeGuestTotals({
   protectionFeeOverrideMinor = 0,
 }) {
   const stay = toMinor(stayMinor)
+  // Short stays are priced by the country-neutral stays capsule (wrapping/stays) with the active
+  // country's capsule profile — prices are variables, set per country. A snapshotted protection fee
+  // (override) keeps the legacy path so an existing booking is never repriced.
+  const profile = capsuleProfile()
+  if (isShortStay && profile && !(toMinor(protectionFeeOverrideMinor) > 0 && protection)) {
+    const q = quoteStay({
+      listing: { nightlyMinor: 1, cleaningMinor: toMinor(fees.cleaningFeeMinor), taxesMinor: toMinor(fees.taxesMinor), otherFeesMinor: toMinor(fees.serviceFeeMinor) + toMinor(fees.parkingFeeMinor) + toMinor(extraFeesMinor) },
+      nights: 1, stayMinor: stay, profile, protection,
+    })
+    const line = (code) => q.lines.find((l) => l.code === code)?.minor || 0
+    return {
+      stayMinor: stay,
+      cleaningMinor: line('CLEANING'),
+      taxesMinor: q.taxMinor,
+      otherFeesMinor: line('SERVICE_FEE') + line('OTHER_FEES'),
+      protectionMinor: q.protectionMinor,
+      totalMinor: q.totalMinor,
+      commissionMinor: q.host.commissionMinor,
+      hostShareMinor: q.host.payoutMinor,
+    }
+  }
   const cleaningMinor = toMinor(fees.cleaningFeeMinor) || (isShortStay ? Math.round(stay * STR_CLEANING_RATE) : 0)
   const taxesMinor = toMinor(fees.taxesMinor) || (isShortStay ? Math.round(stay * STR_TAX_RATE) : 0)
   const otherFeesMinor = toMinor(fees.serviceFeeMinor) + toMinor(fees.parkingFeeMinor) + toMinor(extraFeesMinor)

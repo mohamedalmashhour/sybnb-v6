@@ -47,39 +47,53 @@ export function isAvailable({ checkIn, checkOut, bookings = [], blocks = [], now
   return ![...live, ...blocks].some((x) => overlaps(checkIn, checkOut, new Date(x.checkIn ?? x.startDate), new Date(x.checkOut ?? x.endDate)))
 }
 
-// Server-authoritative price quote. listing: { nightlyMinor, cleaningMinor, weeklyDiscountBp?, monthlyDiscountBp? }.
-export function quoteStay({ listing, nights, profile }) {
+// Server-authoritative price quote. All rates come from profile.stays (prices are variables).
+// listing: { nightlyMinor, cleaningMinor?, taxesMinor?, otherFeesMinor?, weeklyDiscountBp?, monthlyDiscountBp? }
+// options: { protection } — guest bought the optional cancellation-protection add-on (if offered).
+// Two commission styles: 'LODGING' (Airbnb/Québec: % of stay + cleaning) or
+// 'TOTAL_EXCL_PROTECTION' (Syria today: % of everything paid except protection).
+export function quoteStay({ listing, nights, profile, protection = false, stayMinor }) {
   const { stays, taxes = {}, currencies } = profile
   assertMinor(listing.nightlyMinor, 'nightlyMinor')
-  const gross = listing.nightlyMinor * nights
-  const discountBp = nights >= 28 ? listing.monthlyDiscountBp ?? 0 : nights >= 7 ? listing.weeklyDiscountBp ?? 0 : 0
+  // stayMinor lets a caller pass a stay subtotal priced elsewhere (weekend nights, seasons).
+  const gross = Number.isInteger(stayMinor) ? stayMinor : listing.nightlyMinor * nights
+  const discountBp = Number.isInteger(stayMinor) ? 0 : nights >= 28 ? listing.monthlyDiscountBp ?? 0 : nights >= 7 ? listing.weeklyDiscountBp ?? 0 : 0
   const discount = pct(gross, discountBp)
   const accommodation = gross - discount
-  const cleaning = listing.cleaningMinor ?? 0
+  // An explicit fee of 0 falls back to the country percentage (matches the live Syria formula).
+  const cleaning = listing.cleaningMinor || pct(accommodation, stays.fallbackCleaningBp ?? 0)
+  const flatTax = listing.taxesMinor || pct(accommodation, stays.fallbackTaxBp ?? 0)
+  const otherFees = listing.otherFeesMinor ?? 0
   const lodgingBase = accommodation + cleaning
   const serviceFee = pct(lodgingBase, stays.guestServiceFeeBp ?? 0)
+  const protectionMinor = protection && stays.protectionBp ? pct(accommodation, stays.protectionBp) : 0
   const lines = [
     { code: 'ACCOMMODATION', minor: gross, nights, nightlyMinor: listing.nightlyMinor },
     ...(discount ? [{ code: nights >= 28 ? 'MONTHLY_DISCOUNT' : 'WEEKLY_DISCOUNT', minor: -discount, rateBp: discountBp }] : []),
     { code: 'CLEANING', minor: cleaning },
-    { code: 'SERVICE_FEE', minor: serviceFee, rateBp: stays.guestServiceFeeBp ?? 0 },
+    ...(serviceFee ? [{ code: 'SERVICE_FEE', minor: serviceFee, rateBp: stays.guestServiceFeeBp }] : []),
+    ...(otherFees ? [{ code: 'OTHER_FEES', minor: otherFees }] : []),
+    ...(protectionMinor ? [{ code: 'PROTECTION', minor: protectionMinor, rateBp: stays.protectionBp }] : []),
   ]
   // Taxes listed under stays.lodgingTaxes apply to the stay only; stays.salesTaxes also cover the fee.
   const lodgingTax = taxLines(lodgingBase, stays.lodgingTaxes ?? [], taxes)
   const salesTax = taxLines(lodgingBase + serviceFee, stays.salesTaxes ?? [], taxes)
-  const taxList = [...lodgingTax, ...salesTax]
+  const taxList = [...lodgingTax, ...salesTax, ...(flatTax ? [{ code: 'TAX', label: { en: 'Taxes' }, minor: flatTax }] : [])]
   const taxMinor = sum(taxList)
-  const commission = pct(lodgingBase, stays.hostCommissionBp ?? 0)
+  const totalMinor = lodgingBase + serviceFee + otherFees + protectionMinor + taxMinor
+  const commissionBaseMinor = stays.commissionBase === 'TOTAL_EXCL_PROTECTION' ? totalMinor - protectionMinor : lodgingBase
+  const commission = pct(commissionBaseMinor, stays.hostCommissionBp ?? 0)
   return {
     currency: currencies.default,
     nights,
     lines,
     taxes: taxList,
     taxStatus: taxes.status ?? 'NONE',
-    subtotalMinor: lodgingBase + serviceFee,
+    subtotalMinor: lodgingBase + serviceFee + otherFees + protectionMinor,
     taxMinor,
-    totalMinor: lodgingBase + serviceFee + taxMinor,
-    host: { grossMinor: lodgingBase, commissionMinor: commission, payoutMinor: lodgingBase - commission },
+    protectionMinor,
+    totalMinor,
+    host: { grossMinor: commissionBaseMinor, commissionMinor: commission, payoutMinor: commissionBaseMinor - commission },
   }
 }
 

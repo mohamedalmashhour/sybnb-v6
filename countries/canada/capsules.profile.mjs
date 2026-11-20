@@ -17,6 +17,10 @@ export const profile = Object.freeze({
   stays: {
     guestServiceFeeBp: base.stays.guestServiceFeeBp,
     hostCommissionBp: base.stays.hostCommissionBp,
+    protectionBp: 0,
+    fallbackCleaningBp: 0,
+    fallbackTaxBp: 0,
+    commissionBase: 'LODGING',
     lodgingTaxes: base.taxes.stays.filter((k) => k === 'LODGING'),
     salesTaxes: base.taxes.stays.filter((k) => k !== 'LODGING'),
     holdMinutes: base.stays.holdMinutes,

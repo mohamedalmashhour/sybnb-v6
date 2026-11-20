@@ -28,6 +28,10 @@ export const profile = Object.freeze({
   stays: {
     guestServiceFeeBp: 1200,
     hostCommissionBp: 300,
+    protectionBp: 0,           // optional cancellation-protection add-on (% of stay), 0 = not offered
+    fallbackCleaningBp: 0,     // cleaning when a listing sets none
+    fallbackTaxBp: 0,          // flat tax when a listing sets none (use the tax table when known)
+    commissionBase: 'LODGING', // 'LODGING' (stay+cleaning) or 'TOTAL_EXCL_PROTECTION'
     lodgingTaxes: [],          // tax codes applied to the stay only
     salesTaxes: [],            // tax codes applied to stay + service fee
     holdMinutes: 30,

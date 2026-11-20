@@ -24,6 +24,10 @@ export const profile = Object.freeze({
   stays: {
     guestServiceFeeBp: 0,              // Syria charges the host, not the guest
     hostCommissionBp: 1500,            // STR_COMMISSION_RATE 15%
+    protectionBp: 300,                 // optional cancellation-protection add-on, 3% of the stay
+    fallbackCleaningBp: 500,           // cleaning when a listing sets none: 5% of the stay
+    fallbackTaxBp: 200,                // tax when a listing sets none: 2% of the stay
+    commissionBase: 'TOTAL_EXCL_PROTECTION', // commission on everything paid except protection
     lodgingTaxes: [],
     salesTaxes: [],
     holdMinutes: base.bookingPolicy.unpaidExpiryHours * 60,
