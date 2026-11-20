@@ -12,9 +12,9 @@ const hasCountryProblem = (env) => validateEnv(env).some((p) => /SYBNB_COUNTRY|c
 
 console.log('=== FAIL-CLOSED COUNTRY SELECTION (master is country-neutral) ===')
 check('no SYBNB_COUNTRY refuses to run', hasCountryProblem({ ...base }), 'not refused')
-check('unsupported SYBNB_COUNTRY refuses', hasCountryProblem({ ...base, SYBNB_COUNTRY: 'canada' }), 'not refused')
+check('unsupported SYBNB_COUNTRY refuses', hasCountryProblem({ ...base, SYBNB_COUNTRY: 'lebanon' }), 'not refused')
 check('SYBNB_COUNTRY=syria passes', validateEnv({ ...base, SYBNB_COUNTRY: 'syria' }).length === 0, JSON.stringify(validateEnv({ ...base, SYBNB_COUNTRY: 'syria' })))
-check('this release supports Syria only', JSON.stringify(supportedCountries()) === JSON.stringify(['syria']), supportedCountries().join(','))
+check('registry: syria + canada (owner direction 2026-11-20, one base)', JSON.stringify(supportedCountries()) === JSON.stringify(['syria', 'canada']), supportedCountries().join(','))
 
 console.log('\n=== SYRIA PROFILE (isolated, not baked into master) ===')
 const { profile } = loadCountryProfile({ SYBNB_COUNTRY: 'syria' })
