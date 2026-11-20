@@ -5,10 +5,12 @@ import { canadaMapPresentation } from './maps.public.mjs'
 
 const cat = (c) => ({ baseMinor: c.baseCents, perKmMinor: c.perKmCents, perMinMinor: c.perMinCents, minimumMinor: c.minimumCents, seats: c.seats })
 
+// ⚠️ PAYMENTS AND PRICES ARE VARIABLES (owner 2026-11-20): adjust here, per country, later.
 export const profile = Object.freeze({
   key: base.key,
   currencies: base.currencies,
   map: { center: canadaMapPresentation.center, zoom: 11, bounds: base.rides.serviceBounds, provider: 'google' },
+  payments: { methods: ['card_stripe'], payoutMethods: ['bank_transfer'], status: 'TO_BE_DECIDED' },
   timezone: base.timezone,
   defaultLocale: base.defaultLocale,
   taxes: base.taxes,

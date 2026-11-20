@@ -2,6 +2,9 @@
 // Copy to countries/<country>/capsules.profile.mjs and fill in. Every amount is in the currency's
 // minor unit; every rate is in basis points (1 bp = 0.01%). Values below are PLACEHOLDERS, not
 // legal, tax or pricing advice — each must be confirmed for the country before launch.
+// ⚠️ NOTICE (owner decision 2026-11-20): PAYMENTS AND PRICES ARE VARIABLES. Every payment method,
+// price, fee, commission, tax and fare below is set per country here and adjusted later — never
+// hard-coded in wrapping/, server/ or src/.
 export const profile = Object.freeze({
   key: 'example',
   // CURRENCY: change `default` (an ISO code) — decimals and formatting follow automatically.
@@ -11,6 +14,10 @@ export const profile = Object.freeze({
   map: { center: { lat: 0, lng: 0 }, zoom: 11, bounds: null, provider: 'leaflet-osm' },
   timezone: 'UTC',
   defaultLocale: 'en',
+
+  // PAYMENTS: which payment solutions this country uses (chosen per country, adjusted later).
+  // Examples: 'local_wallet', 'card_stripe', 'mada', 'apple_pay', 'bank_transfer', 'cash'.
+  payments: { methods: [], payoutMethods: [], status: 'TO_BE_DECIDED' },
 
   // Tax table. status stays PENDING until an accountant confirms the rates.
   taxes: {

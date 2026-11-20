@@ -11,11 +11,13 @@ const legacy = legacyConfig()
 const cat = (r, seats) => ({ baseMinor: usd(r.baseUsd), perKmMinor: usd(r.perKmUsd), perMinMinor: usd(r.perMinUsd), minimumMinor: usd(r.minFareUsd), seats })
 const SEATS = { 'SR Bike': 1, 'SR Economy': 4, 'SR Comfort': 4, 'SR SUV': 6, 'SR Van': 8, 'SR VIP': 4 }
 
+// ⚠️ PAYMENTS AND PRICES ARE VARIABLES (owner 2026-11-20): adjust here, per country, later.
 export const profile = Object.freeze({
   key: base.key,
   // SYP is quoted in whole pounds in practice, so 0 decimals.
   currencies: { allowed: base.currencies.allowed, default: 'USD', minorDigits: { SYP: 0 } },
   map: { center: { lat: 33.5138, lng: 36.2765 }, zoom: 7, bounds: { minLat: 32.3, maxLat: 37.4, minLng: 35.6, maxLng: 42.4 }, provider: 'leaflet-osm' },
+  payments: { methods: ['local_wallet', 'card_stripe', 'cash'], payoutMethods: ['SHAM_CASH', 'BANK', 'CASH_OFFICE'], status: 'CURRENT_LIVE_SETUP_TO_REVIEW' },
   timezone: 'Asia/Damascus',
   defaultLocale: base.defaultLocale,
   taxes: { status: 'NOT_CONFIGURED' },

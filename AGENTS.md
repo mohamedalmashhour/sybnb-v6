@@ -23,7 +23,10 @@ architecture and safety decisions. It overrides convenience. When in doubt, stop
   (branch `unify/one-base`). Canada is registered in the master registry with every gate closed.
   Reusable business engines live in `wrapping/` as country-neutral capsules (stays = Airbnb model,
   rides = Uber model; more to follow), configured only by a country profile. Gulf (Saudi Arabia,
-  UAE) is the next market. The §5 gates still apply to every country.
+  UAE) is the next market.
+  **NOTICE (owner 2026-11-20): payments and prices are VARIABLES** — every payment method, price,
+  fee, commission, tax and fare is a per-country setting in `countries/<country>/capsules.profile.mjs`,
+  to be adjusted later country by country. Never hard-code them. The §5 gates still apply to every country.
 
 ## 2. Fail-closed country selection (never weaken)
 - Startup **refuses to run** when the country profile is missing, unsupported, or incomplete.
