@@ -9,7 +9,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: starter            # ~$7/mo; the free tier sleeps and is not suitable for an API.
-    healthCheckPath: /api/health/ready
+    healthCheckPath: /api/health/live
     # Migrations run as a pre-deploy step (never baked into the image). Requires DATABASE_URL.
     # !! DEPLOYING THE step5-admin-foundation BRANCH (or any branch containing migrations 078-083) TO A PRODUCTION-CONNECTED
     # !! SERVICE WILL APPLY THEM. The approval gate below stops the deploy BEFORE any schema change unless

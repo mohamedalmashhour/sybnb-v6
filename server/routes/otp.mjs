@@ -1,6 +1,7 @@
 import { db } from '../lib/prisma.mjs'
 import { hashPhone, hashEmail, generateOtpCode, hashOtpCode, verifyOtpCode } from '../lib/security.mjs'
 import { sendSms } from '../lib/sms.mjs'
+import { TWILIO_VERIFY_MARKER, twilioVerifyStart, twilioVerifyCheck } from '../lib/twilio-verify.mjs'
 import { log } from '../lib/logger.mjs'
 import { sendEmail } from '../lib/email.mjs'
 import { withBrand } from '../lib/notifications.mjs'
@@ -121,13 +122,16 @@ export async function handleOtp(req, res, url) {
       data: { status: 'CANCELLED' },
     })
 
-    const code = generateOtpCode()
-    const codeHash = hashOtpCode(identifierHash, purpose, code)
+    // Twilio Verify (SMS only): Twilio creates and checks the code; we store a marker, never a code.
+    const useTwilioVerify = id.kind === 'phone' && channel === 'sms' && (process.env.SMS_PROVIDER || '').toLowerCase() === 'twilio-verify'
+    if (useTwilioVerify && !channelEnabled('sms')) throw fail(400, 'OTP_CHANNEL_NOT_ENABLED', 'SMS verification is not enabled for this country.')
+    const code = useTwilioVerify ? null : generateOtpCode()
+    const codeHash = useTwilioVerify ? TWILIO_VERIFY_MARKER : hashOtpCode(identifierHash, purpose, code)
     const expiresAt = new Date(Date.now() + CODE_TTL_MS)
 
     // Idempotency key (email provider): identical retried send de-duplicates; a new code differs.
     const idempotencyKey = `otp:${identifierHash}:${purpose}:${codeHash.slice(0, 16)}`
-    const delivery = await deliverCode(id, code, purpose, idempotencyKey)
+    const delivery = useTwilioVerify ? await twilioVerifyStart(id.value) : await deliverCode(id, code, purpose, idempotencyKey)
     // Admin codes (sign-in and password reset) are delivered by email only.
 
     const record = await db().verificationCode.create({
@@ -147,7 +151,7 @@ export async function handleOtp(req, res, url) {
       ...(id.kind === 'phone' ? { maskedPhone: id.masked } : { maskedEmail: id.masked }),
       expiresAt,
       provider: delivery.provider,
-      ...(EXPOSE_CODE ? { devCode: code } : {}),
+      ...(EXPOSE_CODE && code ? { devCode: code } : {}),
     })
   }
 
@@ -179,7 +183,9 @@ export async function handleOtp(req, res, url) {
       throw fail(400, 'OTP_EXPIRED', 'This code has expired. Request a new one.')
     }
 
-    const ok = verifyOtpCode(identifierHash, purpose, code, record.codeHash)
+    const ok = record.codeHash === TWILIO_VERIFY_MARKER
+      ? (id.kind === 'phone' && await twilioVerifyCheck(id.value, code))
+      : verifyOtpCode(identifierHash, purpose, code, record.codeHash)
     if (!ok) {
       const attempts = record.attempts + 1
       const exhausted = attempts >= record.maxAttempts

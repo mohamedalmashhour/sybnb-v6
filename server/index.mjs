@@ -6,7 +6,8 @@ import { isRateLimited } from './lib/rateLimit.mjs'
 import { loadEnv, validateEnv } from './lib/env.mjs'
 import { checkDatabase, disconnectDb, db, databaseUrlWithPool } from './lib/prisma.mjs'
 import { startActivationScheduler, resolveActivationMode } from './lib/authz/activation-worker.mjs'
-import { startClockSync, securityTimeStatus } from './lib/authz/clock.mjs'
+import { startClockSync, securityTimeStatus, syncClock } from './lib/authz/clock.mjs'
+import { markActivity, isIdle, idleGated, idleStatus } from './lib/idle.mjs'
 import { bootstrapSecretDiagnostics } from './lib/authz/bootstrap.mjs'
 import { pruneExpiredOtps } from './lib/otp-retention.mjs'
 import { expireUnpaidBookings } from './lib/booking-lifecycle.mjs'
@@ -206,6 +207,8 @@ const server = createServer(async (req, res) => {
   const startedAt = Date.now()
   res.setHeader('x-request-id', requestId)
   requestStarted()
+  // Idle mode: real traffic (not health checks / pingers) keeps the database awake; see lib/idle.mjs.
+  const realTraffic = markActivity(url.pathname)
   res.on('finish', () => logRequest({ requestId, method: req.method, path: url.pathname, status: res.statusCode, durationMs: Date.now() - startedAt }))
   // 'close' fires for finished AND aborted responses, so the in-flight gauge can never leak.
   res.once('close', () => requestFinished({ method: req.method, pathname: url.pathname, status: res.writableFinished ? res.statusCode : 499, durationMs: Date.now() - startedAt }))
@@ -223,7 +226,8 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { ok: true, status: 'alive' })
     }
     if (url.pathname === '/api/health' || url.pathname === '/api/health/ready') {
-      const db = await databaseStatus()
+      // While idle, answer from the last database check so health probes never wake a sleeping database.
+      const db = isIdle() && lastDbStatus ? { ...lastDbStatus, idle: true } : (lastDbStatus = await databaseStatus())
       return json(res, db.ok ? 200 : 503, {
         ok: db.ok,
         service: 'sybnb-v6-api',
@@ -236,6 +240,10 @@ const server = createServer(async (req, res) => {
         loadTestTarget: db.ok ? await isLoadTestTarget() : false,
       })
     }
+
+    // First real request after idle: refresh the trusted clock before any privileged decision (fail-closed
+    // semantics unchanged: if the database is unreachable, security time simply stays NOT READY).
+    if (realTraffic && !securityTimeStatus().ready) await refreshClockOnce()
 
     if (url.pathname === '/api/contracts') {
       return json(res, 200, {
@@ -368,6 +376,7 @@ async function dispatch(req, res, url, context) {
   return false
 }
 
+let lastDbStatus = null
 async function databaseStatus() {
   if (!process.env.DATABASE_URL) {
     return {
@@ -446,7 +455,7 @@ async function runOtpPrune() {
   }
 }
 if (RUN_BACKGROUND_JOBS) void runOtpPrune()
-const otpPruneTimer = RUN_BACKGROUND_JOBS ? setInterval(runOtpPrune, OTP_PRUNE_INTERVAL_MS) : null
+const otpPruneTimer = RUN_BACKGROUND_JOBS ? setInterval(idleGated('otp_prune', runOtpPrune), OTP_PRUNE_INTERVAL_MS) : null
 otpPruneTimer?.unref() // never keep the process alive on its own (tests/scripts that import this file)
 
 // Money-flow decision 6 (2026-10-08): unpaid PAYMENT_PENDING requests past the country's payment
@@ -465,7 +474,7 @@ async function runBookingExpirySweep() {
     log.error('booking_expiry_sweep_failed', { error: error instanceof Error ? error.message : String(error) })
   }
 }
-const bookingExpiryTimer = RUN_BACKGROUND_JOBS ? setInterval(runBookingExpirySweep, BOOKING_EXPIRY_SWEEP_INTERVAL_MS) : null
+const bookingExpiryTimer = RUN_BACKGROUND_JOBS ? setInterval(idleGated('booking_expiry', runBookingExpirySweep), BOOKING_EXPIRY_SWEEP_INTERVAL_MS) : null
 bookingExpiryTimer?.unref()
 
 // #204 (2026-10-10): in-process dispatch heartbeat. /internal/tick above still exists for an external
@@ -495,13 +504,19 @@ async function runDispatchHeartbeat() {
     log.error('dispatch_heartbeat_failed', { error: error instanceof Error ? error.message : String(error) })
   }
 }
-const dispatchTickTimer = RUN_BACKGROUND_JOBS ? setInterval(runDispatchHeartbeat, DISPATCH_TICK_INTERVAL_MS) : null
+const dispatchTickTimer = RUN_BACKGROUND_JOBS ? setInterval(idleGated('dispatch_heartbeat', runDispatchHeartbeat), DISPATCH_TICK_INTERVAL_MS) : null
 dispatchTickTimer?.unref()
 
 // STEP 5C/5D: trusted time. The database clock is authoritative for security state. The security-time subsystem is
 // NOT READY until the first database clock sample succeeds (retried every 2 s); until then time-sensitive privileged
 // authorization fails closed with SECURITY_TIME_NOT_READY. /api/health reports securityTimeReady.
-startClockSync(db(), { log })
+startClockSync(db(), { log, shouldRun: () => !isIdle() })
+// Dedupe concurrent wake-up clock refreshes.
+let clockRefresh = null
+function refreshClockOnce() {
+  if (!clockRefresh) clockRefresh = syncClock(db()).catch(() => null).finally(() => { clockRefresh = null })
+  return clockRefresh
+}
 
 // STEP 5B/5C: activation worker for approved high-risk grants (state maintenance only -- the authorization evaluator
 // independently enforces activation_at). ADMIN_ACTIVATION_MODE = IN_PROCESS | EXTERNAL | DISABLED (see activation-worker.mjs).
@@ -510,7 +525,7 @@ startClockSync(db(), { log })
   if (warning) log.error('activation_mode_warning', { mode, message: warning })
   if (mode === 'IN_PROCESS' && RUN_BACKGROUND_JOBS) {
     const activationIntervalMs = Number(process.env.ADMIN_ACTIVATION_INTERVAL_MS)
-    startActivationScheduler(db(), { intervalMs: Number.isFinite(activationIntervalMs) && activationIntervalMs >= 5_000 ? activationIntervalMs : 60_000, log })
+    startActivationScheduler(db(), { intervalMs: Number.isFinite(activationIntervalMs) && activationIntervalMs >= 5_000 ? activationIntervalMs : 60_000, log, shouldRun: () => !isIdle() })
   }
   log.info('activation_mode', { mode, source })
 }

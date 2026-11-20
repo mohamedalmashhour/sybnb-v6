@@ -116,11 +116,14 @@ export async function syncClock(client, { sample = async () => (await client.$qu
  * Start-up + periodic sampling. Until the first sample succeeds the security time stays NOT READY and the
  * sampler retries quickly (retryMs) rather than waiting a full interval. `onReady` fires once.
  */
-export function startClockSync(client, { intervalMs = 60_000, retryMs = 2_000, log = null, onReady = null } = {}) {
+export function startClockSync(client, { intervalMs = 60_000, retryMs = 2_000, log = null, onReady = null, shouldRun = () => true } = {}) {
   let stopped = false
   let announced = false
   let retry = null
   const run = async () => {
+    // Idle mode: once ready, periodic samples pause while nobody uses the platform (the first real request
+    // re-samples before any privileged decision). The start-up sample and not-ready retries always run.
+    if (announced && !shouldRun()) return
     try {
       const s = await syncClock(client)
       if (Math.abs(s.offsetMs) > 2_000) log?.error?.('clock_skew_detected', { offsetMs: s.offsetMs })
