@@ -1,12 +1,14 @@
 // Canada (Québec) settings for the wrapping/ stays + rides capsules, DERIVED from ./profile.mjs so
 // the numbers live in one place. Tax rates stay PENDING_ACCOUNTANT_CONFIRMATION (see profile.taxes).
 import { profile as base } from './profile.mjs'
+import { canadaMapPresentation } from './maps.public.mjs'
 
 const cat = (c) => ({ baseMinor: c.baseCents, perKmMinor: c.perKmCents, perMinMinor: c.perMinCents, minimumMinor: c.minimumCents, seats: c.seats })
 
 export const profile = Object.freeze({
   key: base.key,
   currencies: base.currencies,
+  map: { center: canadaMapPresentation.center, zoom: 11, bounds: base.rides.serviceBounds, provider: 'google' },
   timezone: base.timezone,
   defaultLocale: base.defaultLocale,
   taxes: base.taxes,

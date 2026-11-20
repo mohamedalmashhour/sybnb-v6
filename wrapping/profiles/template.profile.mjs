@@ -4,7 +4,11 @@
 // legal, tax or pricing advice — each must be confirmed for the country before launch.
 export const profile = Object.freeze({
   key: 'example',
-  currencies: { allowed: ['XXX'], default: 'XXX' },
+  // CURRENCY: change `default` (an ISO code) — decimals and formatting follow automatically.
+  currencies: { allowed: ['XXX'], default: 'XXX' /*, minorDigits: { XXX: 0 } */ },
+
+  // MAP: where maps open, zoom, service area (bounds) and provider.
+  map: { center: { lat: 0, lng: 0 }, zoom: 11, bounds: null, provider: 'leaflet-osm' },
   timezone: 'UTC',
   defaultLocale: 'en',
 

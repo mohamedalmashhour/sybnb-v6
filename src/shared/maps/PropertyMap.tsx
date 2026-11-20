@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { countryMapCenter, countryMapZoom } from '../country/presentation'
 import { type Lang } from '../../engines/language/languageEngine'
 import { listingCoords, type PlatformListing } from '../api/platformApi'
 import { moneyText } from '../i18n/display'
@@ -8,7 +9,7 @@ import { listingDisplayTitle } from '../listing/displayTitle'
 
 // Property results map (Centris-depth, 2026-10-11). Renders a pin per listing that has coordinates;
 // the popup links to the listing. Listings without coordinates are simply not plotted.
-const FALLBACK_CENTER: [number, number] = [33.5138, 36.2765] // Damascus
+const FALLBACK_CENTER: [number, number] = [countryMapCenter().lat, countryMapCenter().lng] // country profile
 
 function priceIcon(label: string): L.DivIcon {
   return L.divIcon({
@@ -26,7 +27,7 @@ export function PropertyMap({ listings, lang, height = 420 }: { listings: Platfo
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
-    const map = L.map(containerRef.current, { attributionControl: true }).setView(FALLBACK_CENTER, 7)
+    const map = L.map(containerRef.current, { attributionControl: true }).setView(FALLBACK_CENTER, countryMapZoom())
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map)
     layerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map

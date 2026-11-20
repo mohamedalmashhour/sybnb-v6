@@ -5,6 +5,10 @@ export function capsuleProfileProblems(p, { stays = true, rides = true } = {}) {
   need(p?.key, 'missing key')
   need(p?.currencies?.default && p.currencies.allowed?.includes(p.currencies.default), 'default currency must be in allowed list')
   need(p?.timezone, 'missing timezone')
+  need(Number.isFinite(p?.map?.center?.lat) && Number.isFinite(p?.map?.center?.lng), 'missing map.center')
+  for (const c of p?.currencies?.allowed ?? []) {
+    try { new Intl.NumberFormat('en', { style: 'currency', currency: c }) } catch { out.push(`unknown currency '${c}'`) }
+  }
   const taxCodes = Object.keys(p?.taxes ?? {}).filter((k) => k !== 'status')
   const known = (list, where) => (list ?? []).forEach((k) => need(taxCodes.includes(k), `${where} uses unknown tax '${k}'`))
   if (stays) {

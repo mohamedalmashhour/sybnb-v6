@@ -8,6 +8,7 @@ const P = {
   key: 'testland',
   currencies: { allowed: ['TST'], default: 'TST' },
   timezone: 'America/Toronto',
+  map: { center: { lat: 45.5, lng: -73.57 }, zoom: 11 },
   taxes: { status: 'TEST', VAT: { bp: 1500, label: { en: 'VAT' } }, CITY: { bp: 500, label: { en: 'City tax' } } },
   stays: { ...template.stays, lodgingTaxes: ['CITY'], salesTaxes: ['VAT'], requireRegistrationNumber: true },
   rides: {
@@ -105,4 +106,21 @@ test('rides: surge from demand, cancel fees, no-show, driver ranking', () => {
   const ranked = rides.rankDrivers({ pickup: A, category: 'STANDARD', drivers, profile: P })
   assert.deepEqual(ranked.map((d) => d.id), ['near', 'mid'])
   assert.ok(rides.pickupEtaS(ranked[0], P) > 0)
+})
+
+import { currency, map } from '../../wrapping/index.mjs'
+test('currency: one ISO code drives decimals, formatting and conversion', () => {
+  assert.equal(currency.minorDigits('SAR'), 2); assert.equal(currency.minorDigits('KWD'), 3); assert.equal(currency.minorDigits('JPY'), 0)
+  assert.equal(currency.minorDigits('SYP', { currencies: { minorDigits: { SYP: 0 } } }), 0)
+  assert.equal(currency.toMinor(12.5, 'AED'), 1250); assert.equal(currency.toMinor(1.234, 'KWD'), 1234)
+  assert.match(currency.formatMoney(1250, 'USD', 'en-US'), /\$12\.50/)
+  assert.equal(currency.convertMinor(1000, 'USD', 'SAR', { 'USD->SAR': 3.75 }), 3750)
+  assert.throws(() => currency.convertMinor(1, 'USD', 'EUR', {}), /no exchange rate/)
+  assert.throws(() => currency.minorDigits('ZZZZ'), /unknown currency/)
+})
+test('map: country centre by default, zooms to a known point', () => {
+  assert.deepEqual(map.initialView(P).center, P.map.center)
+  const v = map.initialView(P, null, { lat: 45.5, lng: -73.6 })
+  assert.equal(v.center.lat, 45.5); assert.ok(v.zoom >= 14)
+  assert.throws(() => map.mapSettings({ key: 'x' }), /map.center/)
 })

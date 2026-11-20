@@ -13,7 +13,9 @@ const SEATS = { 'SR Bike': 1, 'SR Economy': 4, 'SR Comfort': 4, 'SR SUV': 6, 'SR
 
 export const profile = Object.freeze({
   key: base.key,
-  currencies: { allowed: base.currencies.allowed, default: 'USD' },
+  // SYP is quoted in whole pounds in practice, so 0 decimals.
+  currencies: { allowed: base.currencies.allowed, default: 'USD', minorDigits: { SYP: 0 } },
+  map: { center: { lat: 33.5138, lng: 36.2765 }, zoom: 7, bounds: { minLat: 32.3, maxLat: 37.4, minLng: 35.6, maxLng: 42.4 }, provider: 'leaflet-osm' },
   timezone: 'Asia/Damascus',
   defaultLocale: base.defaultLocale,
   taxes: { status: 'NOT_CONFIGURED' },

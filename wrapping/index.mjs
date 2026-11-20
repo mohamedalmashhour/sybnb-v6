@@ -1,6 +1,8 @@
 // Wrapping folder entry point: country-neutral capsules ready to configure per country.
 export * as money from './core/money.mjs'
 export * as geo from './core/geo.mjs'
+export * as currency from './core/currency.mjs'
+export * as map from './core/map.mjs'
 export * as dates from './core/dates.mjs'
 export { createMachine } from './core/state-machine.mjs'
 export * as stays from './stays/index.mjs'

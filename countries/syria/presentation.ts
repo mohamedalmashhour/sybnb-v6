@@ -15,4 +15,6 @@ export const syriaPresentation: CountryPresentationProfile = {
   supportedLanguages: ['ar', 'en'],
   displayCurrencies: ['SYP', 'USD'], // already public (Fee Schedule); no CAD
   timeZone: 'UTC',          // dates are formatted in UTC across the app
+  defaultCurrency: 'SYP',
+  map: { center: { lat: 33.5138, lng: 36.2765 }, zoom: 7, bounds: { minLat: 32.3, maxLat: 37.4, minLng: 35.6, maxLng: 42.4 } }, // Damascus
 }

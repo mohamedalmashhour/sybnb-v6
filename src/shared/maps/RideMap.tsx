@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { countryMapCenter } from '../country/presentation'
 
 export type MapPoint = { lat: number; lng: number }
 
@@ -47,7 +48,7 @@ function stopIcon(n: number): L.DivIcon {
 
 // Damascus -- purely an initial view center when no real coordinate exists yet, never a marker
 // (no marker is ever placed for a point that wasn't actually provided).
-const FALLBACK_CENTER: MapPoint = { lat: 33.5138, lng: 36.2765 }
+const FALLBACK_CENTER: MapPoint = countryMapCenter() // country profile
 
 export function RideMap({ pickup, dropoff, stops, driverLocation, target, height = 220 }: RideMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)

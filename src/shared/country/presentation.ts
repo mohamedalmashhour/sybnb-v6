@@ -14,6 +14,10 @@ export type CountryPresentationProfile = {
   supportedLanguages: string[]
   displayCurrencies: string[]
   timeZone: string
+  // Main currency shown by default (one of displayCurrencies).
+  defaultCurrency: string
+  // Map defaults for this country: where maps open and how far zoomed when there is no point yet.
+  map: { center: { lat: number; lng: number }; zoom: number; bounds?: { minLat: number; maxLat: number; minLng: number; maxLng: number } }
 }
 
 // Explicit registry — the ONLY sanctioned bridge from master browser code to a country's public
@@ -25,7 +29,7 @@ const PRESENTATIONS: Record<string, CountryPresentationProfile> = {
 }
 
 const REQUIRED_FIELDS: (keyof CountryPresentationProfile)[] = [
-  'countryCode', 'locale', 'fallbackLocale', 'phoneCallingCode', 'phonePlaceholder', 'supportedLanguages', 'displayCurrencies', 'timeZone',
+  'countryCode', 'locale', 'fallbackLocale', 'phoneCallingCode', 'phonePlaceholder', 'supportedLanguages', 'displayCurrencies', 'timeZone', 'defaultCurrency', 'map',
 ]
 
 function assertComplete(p: CountryPresentationProfile, key: string): CountryPresentationProfile {
@@ -72,6 +76,17 @@ export function localeForLang(lang: string | undefined): string {
   // the country profile stays the single source for currency, time zone and the Arabic locale.
   if (lang === 'fr') return 'fr'
   return p.fallbackLocale
+}
+
+// Map defaults of the active country (centre + zoom used before any real point is known).
+export function countryMapCenter(): { lat: number; lng: number } {
+  return activeCountryPresentation().map.center
+}
+export function countryMapZoom(): number {
+  return activeCountryPresentation().map.zoom
+}
+export function defaultDisplayCurrency(): string {
+  return activeCountryPresentation().defaultCurrency
 }
 
 export function phoneCallingCode(): string {

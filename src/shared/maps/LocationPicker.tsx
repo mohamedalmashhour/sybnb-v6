@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { countryMapCenter } from '../country/presentation'
 import { pick, type Lang } from '../../engines/language/languageEngine'
 
 export type LatLng = { lat: number; lng: number }
 
 // Seller location pin (Centris-depth, 2026-10-11). Click or drag the marker to set a listing's map
 // coordinate; the wizard sends it as body.lat/lng. Damascus is only the initial view when no value.
-const FALLBACK_CENTER: LatLng = { lat: 33.5138, lng: 36.2765 }
+const FALLBACK_CENTER: LatLng = countryMapCenter() // country profile
 
 const pinIcon = L.divIcon({
   className: '',
