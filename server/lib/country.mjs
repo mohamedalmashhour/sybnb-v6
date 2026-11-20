@@ -8,10 +8,12 @@
 // single country's values into this module.
 
 import { profile as syria } from '../../countries/syria/profile.mjs'
+import { profile as canada } from '../../countries/canada/profile.mjs'
 import { resolveBookingPolicy } from './booking-policy.mjs'
 
-// Registry of supported country profiles (this release ships Syria only).
-const REGISTRY = { syria }
+// Registry of supported country profiles. Live Rezekme runs SYBNB_COUNTRY=syria; canada is
+// registered with every gate closed.
+const REGISTRY = { syria, canada }
 
 // Fields a country profile must define to be considered complete.
 const REQUIRED_PROFILE_FIELDS = ['key', 'country', 'currencies', 'phoneCountryCode', 'defaultLocale', 'gates']

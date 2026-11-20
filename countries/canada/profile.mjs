@@ -1,7 +1,7 @@
 // SYBNB — Canada (Québec) country profile, used ONLY by the isolated QC backend (QC/server).
 //
-// The V6 master API registry (server/lib/country.mjs) is not changed by this file: QC/server loads
-// it directly and runs with its own database, storage and secrets. Nothing here is inherited from
+// Registered in the master API registry (server/lib/country.mjs) so one codebase serves every
+// country; QC/server still loads it directly and runs with its own database, storage and secrets. Nothing here is inherited from
 // countries/syria and nothing here leaks into it.
 //
 // Tax and fee values are configuration, NOT a compliance conclusion. Every rate below must be
@@ -22,6 +22,14 @@ export const profile = Object.freeze({
   timezone: 'America/Toronto',
 
   communications: { email: true, sms: false },
+
+  // Launch gates for the master API — all closed until the Québec review passes.
+  gates: {
+    legal: 'DRAFT',
+    payments: 'disabled',
+    publicAccess: 'closed',
+    deployment: 'blocked',
+  },
 
   // Rates in basis points (1 bp = 0.01%). Applied per service in QC/server/lib/money.mjs.
   taxes: {
