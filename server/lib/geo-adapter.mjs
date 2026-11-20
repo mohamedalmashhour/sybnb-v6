@@ -8,10 +8,12 @@
 // There is NO external geocoding provider (local gazetteer only) — this seam adds no network call.
 
 import * as syriaGeocoding from '../../countries/syria/geo/geocoding.mjs'
+import * as canadaRidePack from '../../countries/canada/geo/ride-pack.mjs'
 
 // Explicit registry — the ONLY sanctioned bridge from master to a country's geocoder.
 const GEOCODERS = {
   syria: syriaGeocoding,
+  canada: canadaRidePack,
 }
 
 // The capability surface a country geocoder must provide (mirrors existing behavior exactly).

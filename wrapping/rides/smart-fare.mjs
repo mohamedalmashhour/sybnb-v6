@@ -134,7 +134,9 @@ export function smartFare({ cfg, market, category, pickupCoords, dropoffCoords, 
   const fuelMultiplier = 1 + mult.fuelSurchargePercent / 100
   const demandMultiplier = mult.demand
   const combined = fuelMultiplier * trafficMultiplier * nightMultiplier * scheduleMultiplier * demandMultiplier * day.multiplier
-  const varied = preFactor * combined
+  // Optional flat booking fee (not surged), e.g. Québec; 0 when the country sets none (Syria).
+  const bookingFee = Number(fees.bookingFeeUsd) || 0
+  const varied = preFactor * combined + bookingFee
   // Round the charged fare UP to the nearest step (never down).
   const fareMinor = Math.max(Math.ceil(fees.minChargeUsd || 0), Math.ceil(varied / fees.roundingUsd - 1e-9) * fees.roundingUsd)
 
@@ -144,7 +146,7 @@ export function smartFare({ cfg, market, category, pickupCoords, dropoffCoords, 
     baseFareMinor: Math.ceil(baseFare), ring: zone.ring, ringFee: ringFeeApplied,
     dayType: day.type, dateMultiplier: day.multiplier,
     airportSurcharge, airportTrip, internationalSurcharge, internationalTrip,
-    stopsCount: stops, stopsFee, bagCount: bags, bagsFee, riderCount: riders, ridersFee,
+    stopsCount: stops, stopsFee, ...(bookingFee ? { bookingFee } : {}), bagCount: bags, bagsFee, riderCount: riders, ridersFee,
     fuelSurchargePercent: mult.fuelSurchargePercent,
     trafficMultiplier: Math.round(trafficMultiplier * 1000) / 1000, trafficSource,
     isPeak: peak, isNight: night, nightMultiplier, scheduled: Boolean(scheduled), scheduleMultiplier,

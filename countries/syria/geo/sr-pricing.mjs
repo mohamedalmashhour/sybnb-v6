@@ -10,6 +10,8 @@
 // With no stored config the engine behaves exactly like before (legacyConfig, from env). The
 // "recommended" preset below is the cost-based proposal from the pricing study.
 
+import { createPricingPack } from '../../../wrapping/rides/pricing-pack.mjs'
+
 const num = (name, def, min, max) => {
   const raw = Number(process.env[name])
   return Number.isFinite(raw) && raw >= min && raw <= max ? raw : def
@@ -59,13 +61,6 @@ export const PRICING_LIMITS = {
   rate: { baseUsd: [0, 50], perKmUsd: [0.01, 5], perMinUsd: [0, 2], minFareUsd: [0, 200] },
 }
 
-const clamp = (value, [min, max], fallback) => {
-  const n = Number(value)
-  return Number.isFinite(n) && n >= min && n <= max ? n : fallback
-}
-const round3 = (n) => Math.round(n * 1000) / 1000
-const round2 = (n) => Math.round(n * 100) / 100
-
 // The shared cost inputs of the formula. Defaults are the figures in the pricing study.
 export const DEFAULT_COSTS = {
   fuelPriceUsdPerL: 1.4, // Ministry of Energy, gasoline 90, Sept 2026 (about 185 SYP)
@@ -80,47 +75,6 @@ export const DEFAULT_COSTS = {
   trafficUsdPerMin: 0.02, // extra wear/fuel while crawling in traffic
   platformFeePct: 20,
   maintenanceFactor: 1, // 1 = class default, 1.2 = +20% (bad roads)
-}
-
-// ---- The formula --------------------------------------------------------------------------------
-// For one class:
-//   vehicleCostPerKm = fuel L/100 x price/100 + maintenance x factor + (price x (1-resale))/life + insurance + safety
-//   costPerPaidKm    = vehicleCostPerKm / (1 - emptyKm)
-//   driverPerMin     = income / (hours x 60 x utilization)
-//   fare per km      = costPerPaidKm / (1 - platformFee)
-//   fare per minute  = (driverPerMin + traffic per min) / (1 - platformFee)
-//   base             = pickupKm x vehicleCostPerKm / (1 - platformFee) + baseExtra
-// The engine adds night, peak, weekend/holiday, schedule and demand multipliers on top.
-export function deriveClassRates(category, costs, intercity) {
-  const p = CLASS_PROFILES[category] || CLASS_PROFILES['SR Economy']
-  const share = 1 - costs.platformFeePct / 100
-  const vehiclePerKm =
-    (p.fuelL100 / 100) * costs.fuelPriceUsdPerL +
-    p.maintenanceUsdPerKm * costs.maintenanceFactor +
-    (p.carPriceUsd * (1 - costs.resalePct / 100)) / costs.carLifeKm +
-    costs.insuranceUsdPerKm +
-    costs.safetyReserveUsdPerKm
-  const perPaidKm = vehiclePerKm / (1 - costs.emptyKmPct / 100)
-  const perPaidKmIntercity = vehiclePerKm / (1 - (intercity?.emptyKmPct ?? 40) / 100)
-  const driverPerMin = costs.driverIncomeUsdPerMonth / (costs.hoursPerMonth * 60 * (costs.utilizationPct / 100))
-  return {
-    baseUsd: round2((p.pickupKm * vehiclePerKm) / share + p.baseExtraUsd),
-    perKmUsd: round3(perPaidKm / share),
-    perMinUsd: round3((driverPerMin + costs.trafficUsdPerMin) / share),
-    minFareUsd: p.minFareUsd,
-    perKmIntercityUsd: round3(perPaidKmIntercity / share),
-    // Highway minutes carry the driver's time but not the stop-and-go (traffic) cost.
-    perMinIntercityUsd: round3(driverPerMin / share),
-    breakdown: {
-      vehicleCostPerKm: round3(vehiclePerKm),
-      costPerPaidKm: round3(perPaidKm),
-      driverPerMin: round3(driverPerMin),
-    },
-  }
-}
-
-export function deriveAllRates(costs, intercity) {
-  return Object.fromEntries(SR_CATEGORIES.map((c) => [c, deriveClassRates(c, costs, intercity)]))
 }
 
 // ---- Presets ------------------------------------------------------------------------------------
@@ -172,73 +126,11 @@ export function recommendedConfig() {
   }
 }
 
-// ---- Normalize ----------------------------------------------------------------------------------
-function mergeGroup(baseGroup, rawGroup, limits) {
-  const out = {}
-  for (const key of Object.keys(baseGroup)) out[key] = clamp(rawGroup?.[key], limits[key], baseGroup[key])
-  return out
-}
-
-const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s)
-
-// Merge any stored/posted object onto a base config and clamp every number. Unknown keys are dropped.
-// Returns a complete config plus `rates` (the effective per-class rates the engine uses).
-export function normalizePricing(raw, base = legacyConfig()) {
-  const input = raw && typeof raw === 'object' ? raw : {}
-  const mode = input.mode === 'formula' ? 'formula' : input.mode === 'manual' ? 'manual' : base.mode
-  const costs = mergeGroup(base.costs, input.costs, PRICING_LIMITS.costs)
-  const multipliers = mergeGroup(base.multipliers, input.multipliers, PRICING_LIMITS.multipliers)
-  const fees = mergeGroup(base.fees, input.fees, PRICING_LIMITS.fees)
-  fees.ringCount = Math.round(fees.ringCount)
-  fees.roundingUsd = Math.max(1, Math.round(fees.roundingUsd)) // fares are whole dollars (1 minor unit = $1)
-  const intercity = mergeGroup(base.intercity, input.intercity, PRICING_LIMITS.intercity)
-  const avgSpeedKmh = clamp(input.avgSpeedKmh, PRICING_LIMITS.avgSpeedKmh, base.avgSpeedKmh)
-  const manualRates = {}
-  for (const cat of SR_CATEGORIES) {
-    const fallback = base.manualRates[cat]
-    const given = input.manualRates?.[cat]
-    manualRates[cat] = {
-      baseUsd: clamp(given?.baseUsd, PRICING_LIMITS.rate.baseUsd, fallback.baseUsd),
-      perKmUsd: clamp(given?.perKmUsd, PRICING_LIMITS.rate.perKmUsd, fallback.perKmUsd),
-      perMinUsd: clamp(given?.perMinUsd, PRICING_LIMITS.rate.perMinUsd, fallback.perMinUsd),
-      minFareUsd: clamp(given?.minFareUsd, PRICING_LIMITS.rate.minFareUsd, fallback.minFareUsd),
-    }
-  }
-  const holidays = Array.isArray(input.holidays) ? input.holidays.filter(isDate).slice(0, 60) : base.holidays
-  const derived = deriveAllRates(costs, intercity)
-  const rates = {}
-  for (const cat of SR_CATEGORIES) {
-    if (mode === 'formula') rates[cat] = derived[cat]
-    else {
-      const m = manualRates[cat]
-      // Manual classes keep their own per-km for long trips (no separate intercity rate).
-      rates[cat] = { ...m, perKmIntercityUsd: m.perKmUsd, perMinIntercityUsd: m.perMinUsd, breakdown: derived[cat].breakdown }
-    }
-  }
-  return {
-    version: 1,
-    source: raw ? 'custom' : base.source,
-    mode, costs, manualRates, multipliers, fees, intercity, avgSpeedKmh, holidays, rates,
-  }
-}
-
-// What the admin may store: inputs only (rates are derived again on load, so a fuel-price change
-// can never leave stale rates behind).
-export function storableConfig(cfg) {
-  const { rates, ...rest } = cfg
-  return rest
-}
-
-// ---- Active config ------------------------------------------------------------------------------
-let active = normalizePricing(null)
-export function getActivePricing() {
-  return active
-}
-export function setActivePricing(cfg) {
-  active = cfg && cfg.rates ? cfg : normalizePricing(cfg)
-  return active
-}
-export function resetActivePricing() {
-  active = normalizePricing(null)
-  return active
-}
+// ---- Pack ---------------------------------------------------------------------------------------
+// The machinery (normalize/clamp, cost formula, presets, active config) is the country-neutral
+// rides capsule (wrapping/rides/pricing-pack.mjs); Syria supplies only its numbers above.
+const pack = createPricingPack({
+  categories: SR_CATEGORIES, classProfiles: CLASS_PROFILES, defaultCosts: DEFAULT_COSTS, limits: PRICING_LIMITS,
+  legacyConfig, recommendedConfig, fallbackCategory: 'SR Economy',
+})
+export const { deriveClassRates, deriveAllRates, normalizePricing, storableConfig, getActivePricing, setActivePricing, resetActivePricing } = pack

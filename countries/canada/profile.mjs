@@ -23,6 +23,12 @@ export const profile = Object.freeze({
 
   communications: { email: true, sms: false },
 
+  // Host/driver payout methods (⚠️ payments are country settings, owner 2026-11-20; to adjust later).
+  // Admin pays outside the platform and marks the request PAID, as in the master payout flow.
+  payoutMethods: {
+    BANK: { required: ['bankName', 'accountName', 'accountNumber'] },
+  },
+
   // Launch gates for the master API — all closed until the Québec review passes.
   gates: {
     legal: 'DRAFT',
