@@ -332,6 +332,15 @@ async function main() {
   await makeUser(ids.kyc, ['GUEST'])
   await makeUser(ids.rider, ['GUEST'])
   await makeUser(ids.driver, ['DRIVER', 'GUEST'])
+
+  // Ride-safety gate: a driver must have an approved ID and an approved, inspected vehicle before
+  // accepting or being dispatched a ride (sr-rides.mjs). Make the fixture driver fully verified.
+  await db().user.update({ where: { id: ids.driver }, data: { idDocumentStatus: 'APPROVED' } })
+  await db().driverProfile.upsert({
+    where: { userId: ids.driver },
+    create: { userId: ids.driver, vehicleMake: 'Kia', vehicleModel: 'Rio', vehiclePlate: `E2E-${ids.driver.slice(0, 6)}`, vehicleStatus: 'APPROVED', vehicleCategory: 'ECONOMY', inspectionStatus: 'PASSED', inspectionExpiresAt: new Date(Date.now() + 864e5 * 30), registrationExpiresAt: new Date(Date.now() + 864e5 * 30), onDutyAt: new Date() },
+    update: {},
+  })
   await makeUser(ids.bizAdmin, ['GUEST'])
 
   const OP = (await session(ids.operator)).token

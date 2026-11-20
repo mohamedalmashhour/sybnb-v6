@@ -291,6 +291,15 @@ async function main() {
   await makeUser(ids.sender, ['GUEST'])
   await makeUser(ids.kyc, ['GUEST'])
   await makeUser(ids.driver, ['DRIVER', 'GUEST'])
+
+  // Ride-safety gate: a driver must have an approved ID and an approved, inspected vehicle before
+  // accepting or being dispatched a ride (sr-rides.mjs). Make the fixture driver fully verified.
+  await db().user.update({ where: { id: ids.driver }, data: { idDocumentStatus: 'APPROVED' } })
+  await db().driverProfile.upsert({
+    where: { userId: ids.driver },
+    create: { userId: ids.driver, vehicleMake: 'Kia', vehicleModel: 'Rio', vehiclePlate: `E2E-${ids.driver.slice(0, 6)}`, vehicleStatus: 'APPROVED', vehicleCategory: 'ECONOMY', inspectionStatus: 'PASSED', inspectionExpiresAt: new Date(Date.now() + 864e5 * 30), registrationExpiresAt: new Date(Date.now() + 864e5 * 30), onDutyAt: new Date() },
+    update: {},
+  })
   await makeUser(ids.bizAdmin, ['GUEST'])
   await makeUser(ids.bizMember, ['GUEST'])
 
@@ -833,6 +842,9 @@ async function main() {
     {
       const booking = await makeBooking(requestListingId)
       await payAndApprove(booking.id)
+      // Since owner decisions 2026-10-22/23 an approved payment confirms the booking at once; a paid
+      // REQUESTED booking only exists in older data. Recreate it to keep testing this boundary.
+      await db().booking.update({ where: { id: booking.id }, data: { status: 'REQUESTED' } })
       const seeded = await db().booking.findUnique({ where: { id: booking.id } })
       check('6.5-fixture: booking is REQUESTED (host-review listing)', seeded.status === 'REQUESTED', seeded.status)
 
@@ -1256,6 +1268,7 @@ async function main() {
   {
     const booking = await makeBooking(requestListingId)
     const { proofId } = await payAndApprove(booking.id)
+    await db().booking.update({ where: { id: booking.id }, data: { status: 'REQUESTED' } }) // legacy paid-REQUESTED state, see 6.5
     const seeded = await db().booking.findUnique({ where: { id: booking.id } })
     check('14-fixture: booking is REQUESTED and awaiting the host', seeded.status === 'REQUESTED', seeded.status)
 
