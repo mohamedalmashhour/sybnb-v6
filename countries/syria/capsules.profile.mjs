@@ -5,6 +5,7 @@
 // No taxes are listed: Syrian tax/VAT treatment is an open external gate (profile.externalGates).
 import { profile as base } from './profile.mjs'
 import { legacyConfig } from './geo/sr-pricing.mjs'
+import { SYRIA_RIDE_MARKET } from './geo/sr-market.mjs'
 
 const usd = (n) => Math.round(n * 100)
 const legacy = legacyConfig()
@@ -60,5 +61,7 @@ export const profile = Object.freeze({
     searchRadiusM: 8000,
     serviceBounds: { minLat: 32.3, maxLat: 37.4, minLng: 35.6, maxLng: 42.4 },
     cancellation: { graceSeconds: 120, feePercent: 15, noShowPercent: 100, waitMinutes: 10, arrivalRadiusM: 300, minFeeMinor: 100 },
+    // Smart-fare market (rings, airports, peak/night hours, weekend, holidays, car-quality factors).
+    market: SYRIA_RIDE_MARKET,
   },
 })
