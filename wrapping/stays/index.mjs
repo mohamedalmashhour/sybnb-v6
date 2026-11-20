@@ -97,20 +97,57 @@ export function quoteStay({ listing, nights, profile, protection = false, stayMi
   }
 }
 
-// Guest cancellation refund. Policies come from profile.stays.cancellationPolicies keyed by the
-// listing's policy name, e.g. { flexible: [{ hoursBefore: 24, refundBp: 10000 }], ... }: the first
-// tier whose cutoff has not passed wins; otherwise refund 0. Service fee refund follows the profile.
+// Guest cancellation refund — rules are country settings (profile.stays.cancellationPolicies).
+// A policy is either a list of tiers or { tiers, afterLastTierBp, protected }:
+//   tiers: [{ hoursBefore, refundBp, strict? }] — refundBp applies while now is at/before
+//          (check-in local midnight - hoursBefore); strict: true means strictly before.
+//   afterLastTierBp: refund once every tier has passed (Syria: 50%; Airbnb strict: 0).
+//   protected: the same shape, used when the guest bought the protection add-on; the protection
+//              fee itself is never refunded to a guest who cancels.
+// startMs lets the caller supply the check-in start instant (else local midnight in profile.timezone).
+export function policyFor(profile, policyName) {
+  const raw = profile.stays.cancellationPolicies?.[policyName ?? profile.stays.defaultPolicy]
+  if (!raw) throw new Error(`cancellation policy '${policyName ?? profile.stays.defaultPolicy}' is not defined in the country profile`)
+  return Array.isArray(raw) ? { tiers: raw, afterLastTierBp: 0 } : raw
+}
+
+function refundBpAt(rules, startMs, nowMs, cutoffHoursOverride) {
+  const tiers = [...(rules.tiers || [])].sort((x, y) => y.hoursBefore - x.hoursBefore)
+  if (startMs == null) return { refundBp: tiers[0]?.refundBp ?? rules.afterLastTierBp ?? 0, tier: 'NO_DATE', deadlineMs: null }
+  for (let i = 0; i < tiers.length; i++) {
+    const hours = i === 0 && Number.isFinite(cutoffHoursOverride) ? cutoffHoursOverride : tiers[i].hoursBefore
+    const deadline = startMs - hours * 3_600_000
+    if (tiers[i].strict ? nowMs < deadline : nowMs <= deadline) return { refundBp: tiers[i].refundBp, tier: `TIER_${hours}H`, deadlineMs: deadline }
+  }
+  const firstHours = tiers.length ? (Number.isFinite(cutoffHoursOverride) ? cutoffHoursOverride : tiers[0].hoursBefore) : 0
+  return { refundBp: rules.afterLastTierBp ?? 0, tier: 'AFTER_LAST_TIER', deadlineMs: startMs - firstHours * 3_600_000 }
+}
+
+const ruleName = (bp) => (bp >= 10_000 ? 'FULL' : bp === 5_000 ? 'HALF' : bp <= 0 ? 'NONE' : 'PARTIAL')
+
+// Returns { rule, refundMinor, retainedProtectionMinor, refundBp, deadlineMs }.
+export function cancellationRefund({ paidMinor, protectionPurchased = false, protectionMinor = 0, checkIn, now = new Date(), cancelledBy = 'GUEST', profile, policyName, startMs, cutoffHoursOverride }) {
+  const paid = Math.max(0, Math.round(Number(paidMinor) || 0))
+  const protection = protectionPurchased ? Math.min(Math.max(0, Math.round(protectionMinor || 0)), paid) : 0
+  if (!paid) return { rule: 'UNPAID', refundMinor: 0, retainedProtectionMinor: 0, refundBp: 0, deadlineMs: null }
+  if (cancelledBy === 'HOST') return { rule: 'FULL', refundMinor: paid, retainedProtectionMinor: 0, refundBp: 10_000, deadlineMs: null }
+  const policy = policyFor(profile, policyName)
+  const start = startMs !== undefined ? startMs : checkIn ? localMidnight(new Date(checkIn), profile.timezone).getTime() : null
+  const nowMs = new Date(now).getTime()
+  if (protectionPurchased && policy.protected) {
+    const { refundBp, deadlineMs } = refundBpAt(policy.protected, start, nowMs)
+    const base = paid - protection
+    return { rule: `${ruleName(refundBp)}_MINUS_PROTECTION`, refundMinor: refundBp >= 10_000 ? base : pct(base, refundBp), retainedProtectionMinor: protection, refundBp, deadlineMs }
+  }
+  const { refundBp, deadlineMs } = refundBpAt(policy, start, nowMs, cutoffHoursOverride)
+  return { rule: ruleName(refundBp), refundMinor: refundBp >= 10_000 ? paid : pct(paid, refundBp), retainedProtectionMinor: 0, refundBp, deadlineMs }
+}
+
+// Back-compatible simple form used by earlier callers/tests: refund on booking.totalMinor.
 export function guestRefund({ booking, policyName, profile, now = new Date() }) {
   if (booking.status === 'HOLD' || booking.status === 'REQUESTED') return { refundMinor: 0, reason: 'NOT_PAID' }
-  const tiers = profile.stays.cancellationPolicies?.[policyName ?? profile.stays.defaultPolicy]
-  if (!tiers) throw new Error(`cancellation policy '${policyName}' is not defined in the country profile`)
-  const checkIn = localMidnight(new Date(booking.checkIn), profile.timezone)
-  for (const tier of [...tiers].sort((x, y) => y.hoursBefore - x.hoursBefore)) {
-    if (now.getTime() <= checkIn.getTime() - tier.hoursBefore * 3_600_000) {
-      return { refundMinor: pct(booking.totalMinor, tier.refundBp), reason: `TIER_${tier.hoursBefore}H`, refundBp: tier.refundBp }
-    }
-  }
-  return { refundMinor: 0, reason: 'PAST_LAST_CUTOFF' }
+  const r = cancellationRefund({ paidMinor: booking.totalMinor, checkIn: booking.checkIn, now, profile, policyName })
+  return { refundMinor: r.refundMinor, reason: r.rule === 'NONE' ? 'PAST_LAST_CUTOFF' : r.rule, refundBp: r.refundBp }
 }
 
 // A host cancellation always refunds the guest in full.

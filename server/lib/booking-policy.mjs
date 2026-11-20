@@ -1,5 +1,5 @@
 import { capsuleProfile } from './capsule-profile.mjs'
-import { quoteStay } from '../../wrapping/stays/index.mjs'
+import { quoteStay, cancellationRefund } from '../../wrapping/stays/index.mjs'
 // SYBNB — pure booking money policy (owner decisions of 2026-10-08, see MONEY_SPEC decisions 3-6).
 //
 // PURE MODULE: no Prisma, no I/O, no process.env reads except through the explicit `env` argument of
@@ -209,6 +209,17 @@ export function computeCancellation({
   }
 
   if (!paid) return result('UNPAID', 0, 0)
+  // Refund rules come from the country-neutral stays capsule (wrapping/stays) with the active
+  // country's settings; the deadline and the commission/host split of the retained part stay here.
+  // The env override of the full-refund cutoff (BOOKING_FULL_REFUND_CUTOFF_HOURS) still applies.
+  const capsule = capsuleProfile()
+  if (capsule) {
+    const r = cancellationRefund({
+      paidMinor: paid, protectionPurchased, protectionMinor: protection, now, cancelledBy, profile: capsule,
+      startMs: startMs === null ? null : startMs, cutoffHoursOverride: Number(policy.fullRefundCutoffHours),
+    })
+    return result(r.rule, r.refundMinor, r.retainedProtectionMinor)
+  }
   // Host cancels or declines: everything back, protection fee included.
   if (cancelledBy === 'HOST') return result('FULL', paid, 0)
   // No usable check-in date (non-dated division): treat as before the deadline.

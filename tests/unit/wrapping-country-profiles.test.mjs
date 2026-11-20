@@ -20,7 +20,8 @@ for (const [name, p] of [['syria', syria], ['canada', canada]]) {
 test('syria matches live values: 15% host commission, 72h full refund then 50%, 20% ride commission', () => {
   assert.equal(syria.stays.hostCommissionBp, 1500)
   assert.equal(syria.stays.payoutHoldDays, 14)
-  assert.deepEqual(syria.stays.cancellationPolicies.standard.map((t) => t.refundBp), [10000, 5000])
+  assert.equal(syria.stays.cancellationPolicies.standard.tiers[0].refundBp, 10000)
+  assert.equal(syria.stays.cancellationPolicies.standard.afterLastTierBp, 5000)
   assert.equal(syria.rides.driverCommissionBp, 2000)
   assert.equal(syria.rides.categories['SR Economy'].minimumMinor, 400)
 })

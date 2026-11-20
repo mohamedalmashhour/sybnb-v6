@@ -35,8 +35,15 @@ export const profile = Object.freeze({
     payoutHoldDays: 14,                // PAYOUT_HOLD_DAYS
     requireRegistrationNumber: false,
     defaultPolicy: 'standard',
+    // Live Syria rule: full refund up to 72 h before check-in 00:00 (inclusive), then 50% — also
+    // after check-in, until the stay ends. With protection: full minus the protection fee until
+    // check-in 00:00 (strictly before), then 50% minus the fee. Host cancel = full (capsule).
     cancellationPolicies: {
-      standard: [{ hoursBefore: base.bookingPolicy.fullRefundCutoffHours, refundBp: 10000 }, { hoursBefore: 0, refundBp: 5000 }],
+      standard: {
+        tiers: [{ hoursBefore: base.bookingPolicy.fullRefundCutoffHours, refundBp: 10000 }],
+        afterLastTierBp: 5000,
+        protected: { tiers: [{ hoursBefore: 0, refundBp: 10000, strict: true }], afterLastTierBp: 5000 },
+      },
     },
   },
   rides: {
