@@ -47,6 +47,9 @@ export function toCapsuleProfile(base) {
     minTripMeters: 200,
     searchRadiusM: 8000,
     serviceBounds: base.rides.serviceBounds,
+    // Revenu Québec: drivers must be GST/QST-registered before their first trip; the app shows the QST
+    // number to the rider (so it need not be posted in the car).
+    requiredDriverTaxNumbers: ['gst', 'qst'],
     cancellation: { graceSeconds: 120, feePercent: 15, noShowPercent: 100, waitMinutes: 5, arrivalRadiusM: 300, minFeeMinor: 0 },
   },
 })

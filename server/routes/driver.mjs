@@ -1,4 +1,5 @@
 import { db } from '../lib/prisma.mjs'
+import { capsuleProfile } from '../lib/capsule-profile.mjs'
 import { dutyBlockers, carryBags } from './driver-base.mjs'
 import { requireAuth } from '../lib/auth-context.mjs'
 import { json, methodNotAllowed, readJson } from '../lib/responses.mjs'
@@ -249,6 +250,33 @@ export async function handleDriver(req, res, url, context) {
   // Vehicle registration. The DriverProfile has make/model/plate columns and riders are shown them,
   // but nothing wrote them — so every driver card was blank. A registered vehicle (plate) is now
   // required before a driver can claim a ride (enforced in server/routes/sr-rides.mjs).
+  // Country-required sales-tax numbers (Québec: GST + QST, before the first trip). Stored on the
+  // driver profile; the QST number is shown to riders on the ride.
+  if (url.pathname === '/api/driver/tax-numbers') {
+    requireAuth(context, ['DRIVER'])
+    const required = capsuleProfile()?.rides?.requiredDriverTaxNumbers || []
+    if (req.method === 'GET') {
+      const p = await db().driverProfile.findUnique({ where: { userId: context.user.id }, select: { salesTaxNumbers: true } })
+      return json(res, 200, { ok: true, required, numbers: p?.salesTaxNumbers || {} })
+    }
+    if (req.method !== 'PUT') return methodNotAllowed(res, ['GET', 'PUT'])
+    const body = await readJson(req)
+    const numbers = {}
+    for (const k of required) {
+      const v = String(body?.[k] || '').trim().toUpperCase()
+      if (!/^[0-9A-Z ]{6,20}$/.test(v)) {
+        const error = new Error(`Enter a valid ${k.toUpperCase()} registration number.`)
+        error.statusCode = 400
+        error.code = 'TAX_NUMBER_INVALID'
+        error.expose = true
+        throw error
+      }
+      numbers[k] = v
+    }
+    const saved = await db().driverProfile.upsert({ where: { userId: context.user.id }, create: { userId: context.user.id, salesTaxNumbers: numbers }, update: { salesTaxNumbers: numbers }, select: { salesTaxNumbers: true } })
+    return json(res, 200, { ok: true, required, numbers: saved.salesTaxNumbers })
+  }
+
   if (url.pathname === '/api/driver/vehicle') {
     requireAuth(context, ['DRIVER'])
     if (req.method === 'GET') {

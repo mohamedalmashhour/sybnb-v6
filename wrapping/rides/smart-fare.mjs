@@ -65,7 +65,7 @@ function cityMinutes(distanceKm, cfg) {
 
 // Inputs are already geocoded points (the country's geocoder resolves place names).
 export function smartFare({ cfg, market, category, pickupCoords, dropoffCoords, stopCoords = [], stopsCount, internationalTrip = false,
-  riderCount, bagCount, scheduled, lowDataMode, distanceKmOverride, estimatedMinutesOverride, trafficMultiplierOverride, now }) {
+  riderCount, bagCount, scheduled, lowDataMode, distanceKmOverride, estimatedMinutesOverride, trafficMultiplierOverride, now, sharedRiders }) {
   const rates = cfg.rates[category] || cfg.rates[market.fallbackCategory] || Object.values(cfg.rates)[0]
   const fees = cfg.fees
   const mult = cfg.multipliers
@@ -137,8 +137,21 @@ export function smartFare({ cfg, market, category, pickupCoords, dropoffCoords, 
   // Optional flat booking fee (not surged), e.g. Québec; 0 when the country sets none (Syria).
   const bookingFee = Number(fees.bookingFeeUsd) || 0
   const varied = preFactor * combined + bookingFee
-  // Round the charged fare UP to the nearest step (never down).
-  const fareMinor = Math.max(Math.ceil(fees.minChargeUsd || 0), Math.ceil(varied / fees.roundingUsd - 1e-9) * fees.roundingUsd)
+  // Round the charged fare UP to the nearest step (never down). market.fareMinorDigits: 0 = whole
+  // units (Syria, 1 minor = $1), 2 = cents (Canada). The step is fees.roundingUsd in currency units.
+  const scale = 10 ** (market.fareMinorDigits || 0)
+  const stepMinor = Math.max(1, Math.round(fees.roundingUsd * scale))
+  const minChargeMinor = Math.ceil((fees.minChargeUsd || 0) * scale - 1e-9)
+  const fareMinor = Math.max(minChargeMinor, Math.ceil((varied * scale) / stepMinor - 1e-9) * stepMinor)
+
+  // Government per-trip dues and sales taxes (country settings in market.rideCharges; none for
+  // Syria). Québec: $0.90 dues shown separately, then GST 5% + QST 9.975% on fare + dues.
+  const rc = market.rideCharges
+  const ridersSharing = Math.max(1, Math.floor(Number(sharedRiders) || 1))
+  const duesMinor = rc?.perTripDuesMinor ? Math.round(rc.perTripDuesMinor / ridersSharing) : 0
+  const taxes = (rc?.taxes || []).map((t) => ({ code: t.code, label: t.label, rateBp: t.bp, baseMinor: fareMinor + duesMinor, minor: Math.round(((fareMinor + duesMinor) * t.bp) / 10_000) }))
+  const taxMinor = taxes.reduce((sum, t) => sum + t.minor, 0)
+  const charges = rc ? { duesMinor, duesLabel: rc.duesLabel, taxes, taxMinor, totalMinor: fareMinor + duesMinor + taxMinor, taxStatus: rc.taxStatus } : null
 
   return {
     fareMinor, currency: market.currency,
@@ -151,5 +164,6 @@ export function smartFare({ cfg, market, category, pickupCoords, dropoffCoords, 
     trafficMultiplier: Math.round(trafficMultiplier * 1000) / 1000, trafficSource,
     isPeak: peak, isNight: night, nightMultiplier, scheduled: Boolean(scheduled), scheduleMultiplier,
     demandMultiplier, surgeMultiplier: Math.round(combined * 1000) / 1000,
+    ...(charges ? { charges } : {}),
   }
 }

@@ -685,6 +685,8 @@ model DriverProfile {
   seatCount       Int?     @map("seat_count")
   smokingAllowed  Boolean  @default(false) @map("smoking_allowed")
   keyCodeHash     String?  @map("key_code_hash")
+  // Country-required sales-tax numbers (Québec: { gst, qst }); shown to the rider where required.
+  salesTaxNumbers       Json?     @map("sales_tax_numbers")
   onDutyAt        DateTime? @map("on_duty_at")
   tyreType        TyreType? @map("tyre_type")
   tyresFittedOn   DateTime? @map("tyres_fitted_on") @db.Date

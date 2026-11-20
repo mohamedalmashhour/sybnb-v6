@@ -996,7 +996,7 @@ export async function handleSrRides(req, res, url, context) {
             id: true,
             displayName: true,
             idDocumentStatus: true,
-            driverProfile: { select: { vehicleMake: true, vehicleModel: true, vehiclePlate: true, vehicleColor: true, vehicleYear: true, photoRef: true } },
+            driverProfile: { select: { vehicleMake: true, vehicleModel: true, vehiclePlate: true, vehicleColor: true, vehicleYear: true, photoRef: true, salesTaxNumbers: true } },
           },
         },
         review: true,
@@ -1072,6 +1072,10 @@ export async function handleSrRides(req, res, url, context) {
                   vehicleColor: ride.driver.driverProfile.vehicleColor,
                   vehicleYear: ride.driver.driverProfile.vehicleYear,
                   photoUrl: ride.driver.driverProfile.photoRef ? signDriverPhotoUrl(ride.driver.driverProfile.photoRef) : null,
+                  // Québec: the rider can read the driver's QST number in the app (Revenu Québec rule),
+                  // so it need not be posted in the car. Only for countries that require it.
+                  ...(capsuleProfile()?.rides?.requiredDriverTaxNumbers?.includes('qst') && ride.driver.driverProfile.salesTaxNumbers?.qst
+                    ? { qstNumber: ride.driver.driverProfile.salesTaxNumbers.qst } : {}),
                 }
               : null,
             ...ratingSummary,

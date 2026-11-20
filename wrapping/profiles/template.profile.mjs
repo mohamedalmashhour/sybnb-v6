@@ -61,6 +61,7 @@ export const profile = Object.freeze({
     minTripMeters: 200,
     searchRadiusM: 8000,
     serviceBounds: null,       // { minLat, maxLat, minLng, maxLng }
+    requiredDriverTaxNumbers: [], // e.g. ['gst', 'qst'] where drivers must be tax-registered
     cancellation: { graceSeconds: 120, feePercent: 15, noShowPercent: 100, waitMinutes: 5, arrivalRadiusM: 300, minFeeMinor: 0 },
   },
 })

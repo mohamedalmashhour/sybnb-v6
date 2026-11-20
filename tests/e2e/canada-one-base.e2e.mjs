@@ -62,6 +62,21 @@ async function main() {
   console.log('\n=== 4. RIDE QUOTE IN MONTRÉAL ===')
   const r = await call('POST', '/api/sr/quote', guest.token, { pickup: 'Montréal centre-ville', dropoff: 'Plateau', category: 'SR Comfort', pickupCoords: { lat: 45.5017, lng: -73.5673 }, dropoffCoords: { lat: 45.522, lng: -73.585 } })
   check('ride quote answers for Canada (CAD)', r.status === 200 && (r.j?.quote?.currency || r.j?.currency) === 'CAD', r)
+  const rq = r.j?.quote || {}
+  check('fare is in cents (Uber/Lyft style), not whole dollars', Number.isInteger(rq.fareMinor) && rq.fareMinor > 100, rq.fareMinor)
+  check('$0.90 Québec dues shown separately', rq.charges?.duesMinor === 90, rq.charges)
+  const base = rq.fareMinor + 90
+  check('GST 5% + QST 9.975% on fare + dues', rq.charges?.taxes?.[0]?.minor === Math.round(base * 0.05) && rq.charges?.taxes?.[1]?.minor === Math.round(base * 0.09975), rq.charges)
+  check('rider total = fare + dues + taxes', rq.charges?.totalMinor === base + rq.charges.taxMinor, rq.charges)
+
+  console.log('\n=== 5. DRIVER MUST BE GST/QST-REGISTERED (Revenu Québec) ===')
+  const driver = await seedUser('driver', ['GUEST', 'DRIVER'], { idDocumentStatus: 'APPROVED' })
+  const tn0 = await call('GET', '/api/driver/tax-numbers', driver.token)
+  check('Canada requires GST + QST numbers for drivers', JSON.stringify(tn0.j?.required) === JSON.stringify(['gst', 'qst']), tn0)
+  const bad = await call('PUT', '/api/driver/tax-numbers', driver.token, { gst: '1', qst: '' })
+  check('invalid numbers refused', code(bad) === 'TAX_NUMBER_INVALID', bad)
+  const ok = await call('PUT', '/api/driver/tax-numbers', driver.token, { gst: '123456789 RT0001', qst: '1234567890 TQ0001' })
+  check('valid GST/QST numbers saved', ok.status === 200 && ok.j?.numbers?.qst === '1234567890 TQ0001', ok)
 
   console.log(`\n==== CANADA ONE-BASE E2E: ${pass} passed, ${fail} failed ====`)
   await disconnectDb()

@@ -3,6 +3,16 @@
 // UTC-4 in summer; -5 is used (a one-hour shift of the peak window in summer — to refine later).
 export const QUEBEC_RIDE_MARKET = Object.freeze({
   currency: 'CAD',
+  fareMinorDigits: 2,              // fares in cents (Uber/Lyft style), not whole dollars
+  // Government charges on every ride (Revenu Québec, checked 2026-11-20): $0.90 remunerated passenger
+  // transportation dues, shown separately (split on shared rides), then GST 5% + QST 9.975% on the
+  // fare + dues. ⚠️ Rates are country settings, pending the accountant's confirmation.
+  rideCharges: {
+    perTripDuesMinor: 90,
+    duesLabel: { fr: 'Redevance transport rémunéré', en: 'Remunerated passenger transportation dues' },
+    taxes: [{ code: 'GST', bp: 500, label: { fr: 'TPS', en: 'GST' } }, { code: 'QST', bp: 997.5, label: { fr: 'TVQ', en: 'QST' } }],
+    taxStatus: 'PENDING_ACCOUNTANT_CONFIRMATION',
+  },
   utcOffsetHours: -5,
   peakHours: [[7, 9], [16, 18]],
   nightHours: [23, 5],

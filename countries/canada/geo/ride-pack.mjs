@@ -1,6 +1,6 @@
 // Canada (Québec) RIDES PACK for the master ride routes (registered in server/lib/geo-adapter.mjs).
 // ⚠️ Prices are variables (owner 2026-11-20): numbers come from countries/canada/profile.mjs and
-// stay PENDING accountant confirmation. Fares are whole CAD (rounding $1), like SR's whole-unit fares.
+// stay PENDING accountant confirmation. Fares are in CAD cents (rounding 1 cent), like Uber/Lyft.
 // Categories reuse the master ride/vehicle keys: Standard = 'SR Economy', Comfort = 'SR Comfort',
 // XL = 'SR SUV' (display names per country come later). No external geocoder: points come from the
 // app (GPS / map pick) or the small place list below.
@@ -28,7 +28,7 @@ export const DEFAULT_COSTS = {
 export const PRICING_LIMITS = {
   costs: { fuelPriceUsdPerL: [0.5, 5], resalePct: [0, 90], carLifeKm: [50000, 1000000], insuranceUsdPerKm: [0, 1], safetyReserveUsdPerKm: [0, 1], emptyKmPct: [0, 80], driverIncomeUsdPerMonth: [500, 20000], hoursPerMonth: [40, 400], utilizationPct: [20, 100], trafficUsdPerMin: [0, 2], platformFeePct: [0, 50], maintenanceFactor: [0.2, 5] },
   multipliers: { peak: [1, 3], trafficMax: [1, 4], night: [1, 3], schedule: [1, 3], weekend: [1, 3], holiday: [1, 3], demand: [1, 5], fuelSurchargePercent: [0, 100] },
-  fees: { ringFeeUsd: [0, 10], ringWidthKm: [0.5, 20], ringCount: [1, 30], airportBaseUsd: [1, 500], airportSurchargeUsd: [0, 50], internationalSurchargeUsd: [0, 200], stopFeeUsd: [0, 20], freeBags: [0, 10], bagFeeUsd: [0, 20], baseRiders: [1, 8], extraRiderFeeUsd: [0, 20], liveTrackingUsd: [0, 5], safetyFeePerTripUsd: [0, 5], roundingUsd: [1, 50], minChargeUsd: [0, 100], bookingFeeUsd: [0, 20] },
+  fees: { ringFeeUsd: [0, 10], ringWidthKm: [0.5, 20], ringCount: [1, 30], airportBaseUsd: [1, 500], airportSurchargeUsd: [0, 50], internationalSurchargeUsd: [0, 200], stopFeeUsd: [0, 20], freeBags: [0, 10], bagFeeUsd: [0, 20], baseRiders: [1, 8], extraRiderFeeUsd: [0, 20], liveTrackingUsd: [0, 5], safetyFeePerTripUsd: [0, 5], roundingUsd: [0.01, 50], minChargeUsd: [0, 100], bookingFeeUsd: [0, 20] },
   intercity: { thresholdKm: [10, 300], speedKmh: [20, 130], emptyKmPct: [0, 80] },
   avgSpeedKmh: [5, 100],
   rate: { baseUsd: [0, 50], perKmUsd: [0.01, 10], perMinUsd: [0, 5], minFareUsd: [0, 500] },
@@ -42,7 +42,7 @@ export function legacyConfig() {
   return {
     version: 1, source: 'legacy', mode: 'manual', costs: { ...DEFAULT_COSTS }, manualRates,
     multipliers: { peak: 1, trafficMax: Math.min(4, r.maxSurgeBp / 10000), night: 1, schedule: 1, weekend: 1, holiday: 1, demand: 1, fuelSurchargePercent: 0 },
-    fees: { ringFeeUsd: 0, ringWidthKm: 5, ringCount: 1, airportBaseUsd: 45, airportSurchargeUsd: 0, internationalSurchargeUsd: 0, stopFeeUsd: 0, freeBags: 2, bagFeeUsd: 0, baseRiders: 4, extraRiderFeeUsd: 0, liveTrackingUsd: 0, safetyFeePerTripUsd: 0, roundingUsd: 1, minChargeUsd: 0, bookingFeeUsd: dollars(r.bookingFeeCents) },
+    fees: { ringFeeUsd: 0, ringWidthKm: 5, ringCount: 1, airportBaseUsd: 45, airportSurchargeUsd: 0, internationalSurchargeUsd: 0, stopFeeUsd: 0, freeBags: 2, bagFeeUsd: 0, baseRiders: 4, extraRiderFeeUsd: 0, liveTrackingUsd: 0, safetyFeePerTripUsd: 0, roundingUsd: 0.01, minChargeUsd: 0, bookingFeeUsd: dollars(r.bookingFeeCents) },
     intercity: { thresholdKm: 60, speedKmh: 90, emptyKmPct: 40 },
     avgSpeedKmh: r.estimatedKmh,
     holidays: [],
@@ -52,7 +52,7 @@ export function recommendedConfig() {
   return { ...legacyConfig(), source: 'custom', mode: 'formula' }
 }
 
-const pack = createPricingPack({ categories: SR_CATEGORIES, classProfiles: CLASS_PROFILES, defaultCosts: DEFAULT_COSTS, limits: PRICING_LIMITS, legacyConfig, recommendedConfig, fallbackCategory: 'SR Economy' })
+const pack = createPricingPack({ categories: SR_CATEGORIES, classProfiles: CLASS_PROFILES, defaultCosts: DEFAULT_COSTS, limits: PRICING_LIMITS, legacyConfig, recommendedConfig, fallbackCategory: 'SR Economy', minRoundingUnit: 0.01 })
 export const { deriveClassRates, deriveAllRates, normalizePricing, storableConfig, getActivePricing, setActivePricing, resetActivePricing } = pack
 
 // Small place list (owner can extend); anything else must come with coordinates from the app.

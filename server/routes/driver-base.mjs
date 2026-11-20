@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { capsuleProfile } from '../lib/capsule-profile.mjs'
 import { isRateLimited } from '../lib/rateLimit.mjs'
 import { db } from '../lib/prisma.mjs'
 import { requireAuth } from '../lib/auth-context.mjs'
@@ -63,6 +64,10 @@ export async function assertDriverOnDuty(userId) {
   if (!profile?.onDutyAt) throw fail(403, 'DRIVER_NOT_ON_DUTY', 'Enter your key code to start work.')
   const { blockers } = await dutyBlockers(userId, profile)
   if (blockers.length) throw fail(403, 'DRIVER_DOCUMENTS_BLOCK_DUTY', 'Some documents need your attention before you can take rides.')
+  // Country rule (Québec): the driver must be registered for the sales taxes before the first trip.
+  const required = capsuleProfile()?.rides?.requiredDriverTaxNumbers || []
+  const missing = required.filter((k) => !String(profile.salesTaxNumbers?.[k] || '').trim())
+  if (missing.length) throw fail(403, 'DRIVER_TAX_NUMBERS_REQUIRED', `Add your ${missing.map((k) => k.toUpperCase()).join(' and ')} registration number(s) before taking rides.`)
   return profile
 }
 

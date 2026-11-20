@@ -61,7 +61,9 @@ export function createPricingPack(spec) {
     const multipliers = mergeGroup(base.multipliers, input.multipliers, limits.multipliers)
     const fees = mergeGroup(base.fees, input.fees, limits.fees)
     fees.ringCount = Math.round(fees.ringCount)
-    fees.roundingUsd = Math.max(1, Math.round(fees.roundingUsd)) // fares are whole currency units (1 minor unit = 1 unit)
+    // Whole-unit fares by default (Syria: 1 minor = $1); a cents country sets minRoundingUnit 0.01.
+    const minStep = spec.minRoundingUnit ?? 1
+    fees.roundingUsd = minStep >= 1 ? Math.max(1, Math.round(fees.roundingUsd)) : Math.max(minStep, Math.round(fees.roundingUsd / minStep) * minStep)
     const intercity = mergeGroup(base.intercity, input.intercity, limits.intercity)
     const avgSpeedKmh = clamp(input.avgSpeedKmh, limits.avgSpeedKmh, base.avgSpeedKmh)
     const manualRates = {}
