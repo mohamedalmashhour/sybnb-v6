@@ -1,0 +1,51 @@
+// COUNTRY PROFILE TEMPLATE for the stays + rides capsules.
+// Copy to countries/<country>/capsules.profile.mjs and fill in. Every amount is in the currency's
+// minor unit; every rate is in basis points (1 bp = 0.01%). Values below are PLACEHOLDERS, not
+// legal, tax or pricing advice — each must be confirmed for the country before launch.
+export const profile = Object.freeze({
+  key: 'example',
+  currencies: { allowed: ['XXX'], default: 'XXX' },
+  timezone: 'UTC',
+  defaultLocale: 'en',
+
+  // Tax table. status stays PENDING until an accountant confirms the rates.
+  taxes: {
+    status: 'PENDING_ACCOUNTANT_CONFIRMATION',
+    // VAT: { bp: 0, label: { en: 'VAT' } },
+  },
+
+  stays: {
+    guestServiceFeeBp: 1200,
+    hostCommissionBp: 300,
+    lodgingTaxes: [],          // tax codes applied to the stay only
+    salesTaxes: [],            // tax codes applied to stay + service fee
+    holdMinutes: 30,
+    maxNights: 30,
+    payoutHoldDays: 1,
+    requireRegistrationNumber: false,
+    defaultPolicy: 'moderate',
+    cancellationPolicies: {
+      flexible: [{ hoursBefore: 24, refundBp: 10000 }],
+      moderate: [{ hoursBefore: 120, refundBp: 10000 }, { hoursBefore: 24, refundBp: 5000 }],
+      strict: [{ hoursBefore: 336, refundBp: 10000 }, { hoursBefore: 168, refundBp: 5000 }],
+    },
+  },
+
+  rides: {
+    categories: {
+      STANDARD: { baseMinor: 0, perKmMinor: 0, perMinMinor: 0, minimumMinor: 0, seats: 4 },
+    },
+    bookingFeeMinor: 0,
+    perStopMinor: 0,
+    maxStops: 2,
+    driverCommissionBp: 2500,
+    taxes: [],
+    estimatedKmh: 30,
+    roadFactor: 1.3,
+    maxSurgeBp: 15000,
+    minTripMeters: 200,
+    searchRadiusM: 8000,
+    serviceBounds: null,       // { minLat, maxLat, minLng, maxLng }
+    cancellation: { graceSeconds: 120, feePercent: 15, noShowPercent: 100, waitMinutes: 5, arrivalRadiusM: 300, minFeeMinor: 0 },
+  },
+})

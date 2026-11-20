@@ -19,6 +19,12 @@ architecture and safety decisions. It overrides convenience. When in doubt, stop
   never the master's database client, session store, payment adapters or Syria configuration. All
   §5 gates (payments, deployment, public access, legal) stay closed for Canada until authorized.
 
+- **Owner direction 2026-11-20:** SYBNB, Rezekme and QuebecBNB become ONE country-neutral base
+  (branch `unify/one-base`). Canada is registered in the master registry with every gate closed.
+  Reusable business engines live in `wrapping/` as country-neutral capsules (stays = Airbnb model,
+  rides = Uber model; more to follow), configured only by a country profile. Gulf (Saudi Arabia,
+  UAE) is the next market. The §5 gates still apply to every country.
+
 ## 2. Fail-closed country selection (never weaken)
 - Startup **refuses to run** when the country profile is missing, unsupported, or incomplete.
 - **No country inherits another's** secrets, database, storage, providers, legal text, currency, or
