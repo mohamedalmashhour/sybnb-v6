@@ -26,7 +26,9 @@ architecture and safety decisions. It overrides convenience. When in doubt, stop
   UAE) is the next market.
   **NOTICE (owner 2026-11-20): payments and prices are VARIABLES** — every payment method, price,
   fee, commission, tax and fare is a per-country setting in `countries/<country>/capsules.profile.mjs`,
-  to be adjusted later country by country. Never hard-code them. The §5 gates still apply to every country.
+  to be adjusted later country by country. Never hard-code them.
+  QC phase 1 (2026-11-20): `QC/server` pricing and dates use the `wrapping/` capsules (pure, no DB or
+  payment adapters — allowed under the QC import rule above); QC schema, routes and apps fold in later. The §5 gates still apply to every country.
 
 ## 2. Fail-closed country selection (never weaken)
 - Startup **refuses to run** when the country profile is missing, unsupported, or incomplete.

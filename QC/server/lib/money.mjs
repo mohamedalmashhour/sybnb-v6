@@ -1,79 +1,64 @@
-// Server-authoritative CAD pricing for stays and rides. Integer cents only; each line rounds
-// half-up once, and totals are sums of the rounded lines so receipts always add up.
+// Server-authoritative CAD pricing for stays and rides — now a thin adapter over the country-neutral
+// capsules in wrapping/ (one base, owner direction 2026-11-20) configured by the Canada settings.
+// Integer cents only; each line rounds half-up once, totals are sums of the rounded lines.
+// The response shapes below are unchanged for the QC routes and apps (fields named *Cents).
+// ⚠️ Prices are variables: rates live in countries/canada/profile.mjs, never in this file.
+import { pct as capsulePct } from '../../../wrapping/core/money.mjs'
+import { haversineM as capsuleHaversineM } from '../../../wrapping/core/geo.mjs'
+import { quoteStay } from '../../../wrapping/stays/index.mjs'
+import { quoteRide } from '../../../wrapping/rides/index.mjs'
+import { toCapsuleProfile } from '../../../countries/canada/capsules.profile.mjs'
 
-export const pct = (cents, bp) => Math.round((cents * bp) / 10_000)
+export const pct = capsulePct
+export const haversineM = capsuleHaversineM
 
-function taxLines(base, keys, taxes) {
-  return keys.map((key) => ({ code: key, label: taxes[key].label, rateBp: taxes[key].bp, baseCents: base, cents: pct(base, taxes[key].bp) }))
+const capsuleCache = new WeakMap()
+const capsuleFor = (profile) => {
+  if (!capsuleCache.has(profile)) capsuleCache.set(profile, toCapsuleProfile(profile))
+  return capsuleCache.get(profile)
 }
+const taxToCents = (t) => ({ code: t.code, label: t.label, rateBp: t.rateBp, baseCents: t.baseMinor, cents: t.minor })
 
 export function stayQuote({ listing, nights, profile }) {
-  const { stays, taxes } = profile
-  const accommodation = listing.nightlyCents * nights
-  const cleaning = listing.cleaningCents
-  const lodgingBase = accommodation + cleaning
-  const serviceFee = pct(lodgingBase, stays.guestServiceFeeBp)
-  const lines = [
-    { code: 'ACCOMMODATION', cents: accommodation, nights, nightlyCents: listing.nightlyCents },
-    { code: 'CLEANING', cents: cleaning },
-    { code: 'SERVICE_FEE', cents: serviceFee, rateBp: stays.guestServiceFeeBp },
-  ]
-  const taxKeys = stays.taxes ?? taxes.stays
-  const lodging = taxKeys.includes('LODGING') ? taxLines(lodgingBase, ['LODGING'], taxes) : []
-  const sales = taxLines(lodgingBase + serviceFee, taxKeys.filter((k) => k !== 'LODGING'), taxes)
-  const taxTotal = [...lodging, ...sales].reduce((s, l) => s + l.cents, 0)
-  const total = lodgingBase + serviceFee + taxTotal
-  const commission = pct(lodgingBase, stays.hostCommissionBp)
+  const cp = capsuleFor(profile)
+  const q = quoteStay({ listing: { nightlyMinor: listing.nightlyCents, cleaningMinor: listing.cleaningCents }, nights, profile: cp })
+  const line = (code) => q.lines.find((l) => l.code === code)?.minor || 0
   return {
-    currency: 'CAD',
-    lines,
-    taxes: [...lodging, ...sales],
-    taxStatus: taxes.status,
-    subtotalCents: lodgingBase + serviceFee,
-    taxCents: taxTotal,
-    totalCents: total,
-    host: { grossCents: lodgingBase, commissionCents: commission, payoutCents: lodgingBase - commission },
+    currency: q.currency,
+    lines: [
+      { code: 'ACCOMMODATION', cents: line('ACCOMMODATION'), nights, nightlyCents: listing.nightlyCents },
+      { code: 'CLEANING', cents: line('CLEANING') },
+      { code: 'SERVICE_FEE', cents: line('SERVICE_FEE'), rateBp: cp.stays.guestServiceFeeBp },
+    ],
+    taxes: q.taxes.map(taxToCents),
+    taxStatus: q.taxStatus,
+    subtotalCents: q.subtotalMinor,
+    taxCents: q.taxMinor,
+    totalCents: q.totalMinor,
+    host: { grossCents: q.host.grossMinor, commissionCents: q.host.commissionMinor, payoutCents: q.host.payoutMinor },
   }
 }
 
-// Great-circle distance in metres.
-export function haversineM(a, b) {
-  const R = 6_371_000
-  const rad = (d) => (d * Math.PI) / 180
-  const dLat = rad(b.lat - a.lat)
-  const dLng = rad(b.lng - a.lng)
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2
-  return 2 * R * Math.asin(Math.sqrt(h))
-}
-
 export function rideQuote({ pickup, dropoff, category, profile, surgeBp = 10_000 }) {
-  const { rides, taxes } = profile
-  const c = rides.categories[category]
-  const distanceM = Math.round(haversineM(pickup, dropoff) * rides.roadFactor)
-  const durationS = Math.round((distanceM / 1000 / rides.estimatedKmh) * 3600)
-  const surge = Math.min(Math.max(surgeBp, 10_000), rides.maxSurgeBp)
-  const metered = c.baseCents + Math.round((distanceM / 1000) * c.perKmCents) + Math.round((durationS / 60) * c.perMinCents)
-  const fare = pct(Math.max(metered, c.minimumCents), surge)
-  const booking = rides.bookingFeeCents
-  const tax = taxLines(fare + booking, taxes.rides, taxes)
-  const taxTotal = tax.reduce((s, l) => s + l.cents, 0)
-  const commission = pct(fare, rides.driverCommissionBp)
+  const q = quoteRide({ pickup, dropoff, category, profile: capsuleFor(profile), surge: surgeBp })
+  const fare = q.lines.find((l) => l.code === 'FARE')
+  const booking = q.lines.find((l) => l.code === 'BOOKING_FEE')
   return {
-    distanceM,
-    durationS,
+    distanceM: q.distanceM,
+    durationS: q.durationS,
     breakdown: {
-      currency: 'CAD',
-      estimate: 'STRAIGHT_LINE_X_ROAD_FACTOR',
+      currency: q.currency,
+      estimate: q.estimate,
       lines: [
-        { code: 'FARE', cents: fare, surgeBp: surge, minimumApplied: metered < c.minimumCents },
-        { code: 'BOOKING_FEE', cents: booking },
+        { code: 'FARE', cents: fare.minor, surgeBp: fare.surgeBp, minimumApplied: fare.minimumApplied },
+        { code: 'BOOKING_FEE', cents: booking.minor },
       ],
-      taxes: tax,
-      taxStatus: taxes.status,
-      taxCents: taxTotal,
-      totalCents: fare + booking + taxTotal,
-      driver: { grossCents: fare, commissionCents: commission, payoutCents: fare - commission },
+      taxes: q.taxes.map(taxToCents),
+      taxStatus: q.taxStatus,
+      taxCents: q.taxMinor,
+      totalCents: q.totalMinor,
+      driver: { grossCents: q.driver.grossMinor, commissionCents: q.driver.commissionMinor, payoutCents: q.driver.payoutMinor },
     },
-    totalCents: fare + booking + taxTotal,
+    totalCents: q.totalMinor,
   }
 }

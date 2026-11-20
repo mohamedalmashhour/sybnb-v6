@@ -2,6 +2,13 @@
 
 Canada/Québec stack, separate from the V6 Syria platform: its own API, database and secrets.
 
+**One base (owner direction 2026-11-20):** QC pricing and calendar rules now run on the shared,
+country-neutral capsules in `wrapping/` (stays = Airbnb model, rides = Uber model), configured by
+`countries/canada/profile.mjs` through `countries/canada/capsules.profile.mjs`. `server/lib/money.mjs`
+and `server/lib/dates.mjs` are thin adapters with the same response shapes. Still separate for now:
+the QC database/schema, routes and the QTR/QRide apps — they fold into the master in later phases.
+⚠️ Payments and prices are variables, set per country in the profile — never in code.
+
 - `server/` — QC API (rides + stays). See `server/README.md`.
 - `QTR/` — short-term stays app (guests, hosts, admin). Port 5191.
 - `QRide/` — rides app (riders, drivers, admin). Port 5190.
