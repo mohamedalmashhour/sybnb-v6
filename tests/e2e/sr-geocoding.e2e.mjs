@@ -92,14 +92,17 @@ eq('one UNRESOLVED stop -> whole quote falls back to default distance + estimate
   { fareMinor: 5, currency: 'USD', distanceKm: 5, estimatedMinutes: 11, estimated: true, distanceSource: 'estimate', baseFareMinor: 4, airportSurcharge: 0, airportTrip: false, internationalSurcharge: 0, internationalTrip: false, stopsCount: 1, stopsFee: 1, bagCount: 0, bagsFee: 0, riderCount: 1, ridersFee: 0, fuelSurchargePercent: 0, trafficMultiplier: 1, trafficSource: 'none', isPeak: false, isNight: false, nightMultiplier: 1, scheduled: false, scheduleMultiplier: 1, demandMultiplier: 1, surgeMultiplier: 1, pickupCoords: { lat: 33.5169, lng: 36.287 }, dropoffCoords: { lat: 33.503, lng: 36.235 }, stopCoords: [null] })
 
 // --- Smart pricing: Damascus rings + day/date factor ---
-import * as zones from '../../countries/syria/geo/sr-zones.mjs'
-eq('ring 1 at the centre', zones.ringOf(zones.DAMASCUS_CENTER), 1)
-eq('Damascus airport is ring 9', zones.ringOf({ lat: 33.4114, lng: 36.5156 }), 9)
-eq('far away is capped at ring 10', zones.ringOf({ lat: 36.2, lng: 37.1 }), 10)
-eq('ring fee: ring 9 = 8 x 0.40', Math.round(zones.ringFeeUsd(null, { lat: 33.4114, lng: 36.5156 }).feeUsd * 100) / 100, 3.2)
-eq('Monday is a weekday', zones.dayFactor(new Date('2026-10-19T09:00:00Z')).type, 'weekday')
-eq('Friday is a weekend day', zones.dayFactor(new Date('2026-10-23T09:00:00Z')).type, 'weekend')
-eq('Christmas is a holiday', zones.dayFactor(new Date('2026-12-25T09:00:00Z')).type, 'holiday')
+// Ring / day rules now live in the wrapping/rides smart-fare engine + Syria market settings.
+const engine = await import('../../wrapping/rides/smart-fare.mjs')
+const { SYRIA_RIDE_MARKET: M } = await import('../../countries/syria/geo/sr-market.mjs')
+const cfgZ = (await import('../../countries/syria/geo/sr-pricing.mjs')).legacyConfig()
+eq('ring 1 at the centre', engine.ringOf(M.ringCenter, cfgZ.fees, M), 1)
+eq('Damascus airport is ring 9', engine.ringOf({ lat: 33.4114, lng: 36.5156 }, cfgZ.fees, M), 9)
+eq('far away is capped at ring 10', engine.ringOf({ lat: 36.2, lng: 37.1 }, cfgZ.fees, M), 10)
+eq('ring fee: ring 9 = 8 x 0.40', Math.round(engine.ringFee(null, { lat: 33.4114, lng: 36.5156 }, cfgZ.fees, M).fee * 100) / 100, 3.2)
+eq('Monday is a weekday', engine.dayFactor(new Date('2026-10-19T09:00:00Z'), cfgZ, M).type, 'weekday')
+eq('Friday is a weekend day', engine.dayFactor(new Date('2026-10-23T09:00:00Z'), cfgZ, M).type, 'weekend')
+eq('Christmas is a holiday', engine.dayFactor(new Date('2026-12-25T09:00:00Z'), cfgZ, M).type, 'holiday')
 eq('mazeh spelling now resolves', Boolean(g.resolvePlaceText('mazeh jabel')), true)
 
 
