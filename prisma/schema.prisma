@@ -3421,3 +3421,43 @@ model CrmActivity {
   @@index([source])
   @@map("crm_activities")
 }
+
+// Money collected for the government (sales taxes, per-trip dues): held by the company in its own
+// accounts, never shared with drivers or hosts, then remitted from daily/monthly totals (owner 2026-11-20).
+model TaxCollection {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  country      String
+  account      String
+  taxCode      String         @map("tax_code")
+  sourceType   String         @map("source_type")
+  sourceId     String         @map("source_id")
+  baseMinor    Int            @default(0) @map("base_minor")
+  rateBp       Float?         @map("rate_bp")
+  amountMinor  Int            @map("amount_minor")
+  currency     String
+  collectedAt  DateTime       @default(now()) @map("collected_at") @db.Timestamptz(6)
+  remittanceId String?        @map("remittance_id") @db.Uuid
+  remittance   TaxRemittance? @relation(fields: [remittanceId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceType, sourceId, taxCode], map: "tax_collections_source_code_key")
+  @@index([country, account, collectedAt], map: "tax_collections_account_collected_idx")
+  @@index([remittanceId], map: "tax_collections_remittance_idx")
+  @@map("tax_collections")
+}
+
+model TaxRemittance {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  country      String
+  account      String
+  currency     String
+  periodStart  DateTime        @map("period_start") @db.Date
+  periodEnd    DateTime        @map("period_end") @db.Date
+  amountMinor  Int             @map("amount_minor")
+  reference    String?
+  paidAt       DateTime        @default(now()) @map("paid_at") @db.Timestamptz(6)
+  recordedById String?         @map("recorded_by_id") @db.Uuid
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  collections  TaxCollection[]
+
+  @@map("tax_remittances")
+}

@@ -2,6 +2,7 @@
 // the numbers live in one place. Tax rates stay PENDING_ACCOUNTANT_CONFIRMATION (see profile.taxes).
 import { profile as baseProfile } from './profile.mjs'
 import { canadaMapPresentation } from './maps.public.mjs'
+import { QUEBEC_RIDE_MARKET } from './geo/ride-market.mjs'
 
 const cat = (c) => ({ baseMinor: c.baseCents, perKmMinor: c.perKmCents, perMinMinor: c.perMinCents, minimumMinor: c.minimumCents, seats: c.seats })
 
@@ -50,6 +51,7 @@ export function toCapsuleProfile(base) {
     // Revenu Québec: drivers must be GST/QST-registered before their first trip; the app shows the QST
     // number to the rider (so it need not be posted in the car).
     requiredDriverTaxNumbers: ['gst', 'qst'],
+    market: QUEBEC_RIDE_MARKET,
     cancellation: { graceSeconds: 120, feePercent: 15, noShowPercent: 100, waitMinutes: 5, arrivalRadiusM: 300, minFeeMinor: 0 },
   },
 })

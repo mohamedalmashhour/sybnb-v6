@@ -9,8 +9,9 @@ export const QUEBEC_RIDE_MARKET = Object.freeze({
   // fare + dues. ⚠️ Rates are country settings, pending the accountant's confirmation.
   rideCharges: {
     perTripDuesMinor: 90,
+    duesAccount: 'RIDE_DUES',      // recorded separately from the sales taxes, remitted to Revenu Québec
     duesLabel: { fr: 'Redevance transport rémunéré', en: 'Remunerated passenger transportation dues' },
-    taxes: [{ code: 'GST', bp: 500, label: { fr: 'TPS', en: 'GST' } }, { code: 'QST', bp: 997.5, label: { fr: 'TVQ', en: 'QST' } }],
+    taxes: [{ code: 'GST', account: 'GST_QST', bp: 500, label: { fr: 'TPS', en: 'GST' } }, { code: 'QST', account: 'GST_QST', bp: 997.5, label: { fr: 'TVQ', en: 'QST' } }],
     taxStatus: 'PENDING_ACCOUNTANT_CONFIRMATION',
   },
   utcOffsetHours: -5,

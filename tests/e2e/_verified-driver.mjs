@@ -10,7 +10,7 @@ export async function makeDriverReady(db, userId) {
   await db.driverProfile.upsert({
     where: { userId },
     create: { userId, vehicleMake: 'Kia', vehicleModel: 'Rio', vehiclePlate: `E2E-${userId.slice(0, 8)}`, vehicleStatus: 'APPROVED', vehicleCategory: 'ECONOMY', inspectionStatus: 'PASSED', inspectionExpiresAt: in30, registrationExpiresAt: in30, onDutyAt: new Date() },
-    update: { vehicleStatus: 'APPROVED', inspectionStatus: 'PASSED', inspectionExpiresAt: in30, registrationExpiresAt: in30, onDutyAt: new Date() },
+    update: { vehicleMake: 'Kia', vehicleModel: 'Rio', vehiclePlate: `E2E-${userId.slice(0, 8)}`, vehicleCategory: 'ECONOMY', vehicleStatus: 'APPROVED', inspectionStatus: 'PASSED', inspectionExpiresAt: in30, registrationExpiresAt: in30, onDutyAt: new Date() },
   })
   const have = new Set((await db.driverDocument.findMany({ where: { userId, status: 'APPROVED' }, select: { kind: true } })).map((d) => d.kind))
   for (const kind of DOCS.filter((k) => !have.has(k))) {

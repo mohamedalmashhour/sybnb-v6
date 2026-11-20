@@ -63,6 +63,20 @@ function cityMinutes(distanceKm, cfg) {
   return (cityKm / cfg.avgSpeedKmh) * 60 + (longKm / cfg.intercity.speedKmh) * 60
 }
 
+// Government per-trip dues and sales taxes (country settings in market.rideCharges; null for Syria).
+// Québec: $0.90 dues shown separately (split on shared rides), then GST 5% + QST 9.975% on fare + dues.
+// Each line carries the ACCOUNT it is recorded in for remittance (GST_QST or RIDE_DUES).
+export function governmentCharges(fareMinor, market, sharedRiders = 1) {
+  const rc = market?.rideCharges
+  if (!rc) return null
+  const share = Math.max(1, Math.floor(Number(sharedRiders) || 1))
+  const duesMinor = rc.perTripDuesMinor ? Math.round(rc.perTripDuesMinor / share) : 0
+  const base = fareMinor + duesMinor
+  const taxes = (rc.taxes || []).map((t) => ({ code: t.code, account: t.account || 'GST_QST', label: t.label, rateBp: t.bp, baseMinor: base, minor: Math.round((base * t.bp) / 10_000) }))
+  const taxMinor = taxes.reduce((sum, t) => sum + t.minor, 0)
+  return { duesMinor, duesAccount: rc.duesAccount || 'RIDE_DUES', duesLabel: rc.duesLabel, taxes, taxMinor, totalMinor: base + taxMinor, taxStatus: rc.taxStatus }
+}
+
 // Inputs are already geocoded points (the country's geocoder resolves place names).
 export function smartFare({ cfg, market, category, pickupCoords, dropoffCoords, stopCoords = [], stopsCount, internationalTrip = false,
   riderCount, bagCount, scheduled, lowDataMode, distanceKmOverride, estimatedMinutesOverride, trafficMultiplierOverride, now, sharedRiders }) {
@@ -144,14 +158,7 @@ export function smartFare({ cfg, market, category, pickupCoords, dropoffCoords, 
   const minChargeMinor = Math.ceil((fees.minChargeUsd || 0) * scale - 1e-9)
   const fareMinor = Math.max(minChargeMinor, Math.ceil((varied * scale) / stepMinor - 1e-9) * stepMinor)
 
-  // Government per-trip dues and sales taxes (country settings in market.rideCharges; none for
-  // Syria). Québec: $0.90 dues shown separately, then GST 5% + QST 9.975% on fare + dues.
-  const rc = market.rideCharges
-  const ridersSharing = Math.max(1, Math.floor(Number(sharedRiders) || 1))
-  const duesMinor = rc?.perTripDuesMinor ? Math.round(rc.perTripDuesMinor / ridersSharing) : 0
-  const taxes = (rc?.taxes || []).map((t) => ({ code: t.code, label: t.label, rateBp: t.bp, baseMinor: fareMinor + duesMinor, minor: Math.round(((fareMinor + duesMinor) * t.bp) / 10_000) }))
-  const taxMinor = taxes.reduce((sum, t) => sum + t.minor, 0)
-  const charges = rc ? { duesMinor, duesLabel: rc.duesLabel, taxes, taxMinor, totalMinor: fareMinor + duesMinor + taxMinor, taxStatus: rc.taxStatus } : null
+  const charges = governmentCharges(fareMinor, market, sharedRiders)
 
   return {
     fareMinor, currency: market.currency,

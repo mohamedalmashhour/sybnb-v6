@@ -706,7 +706,12 @@ export async function settlePrepaidRide(tx, { ride }) {
       note: 'SYBNB ride commission settled from the rider prepayment.',
     })
   }
-  return { settled: true, driverMinor, commissionMinor }
+  // Government money (sales taxes, per-trip dues) collected with the prepayment: recorded in the
+  // company's government accounts, never paid to the driver (owner decision 2026-11-20).
+  const { recordRideGovernmentCharges } = await import('./tax-accounts.mjs')
+  const { capsuleProfile } = await import('./capsule-profile.mjs')
+  const gov = await recordRideGovernmentCharges(tx, { ride, country: capsuleProfile()?.key || 'none' })
+  return { settled: true, driverMinor, commissionMinor, governmentRecorded: gov.recorded }
 }
 
 // Refund a prepaid ride that was cancelled before completion. The rider gets their prepayment back,

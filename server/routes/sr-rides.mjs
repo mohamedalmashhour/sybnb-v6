@@ -14,6 +14,7 @@ import { signDriverPhotoUrl } from '../lib/driver-photo-storage.mjs'
 import { getDriverRatingSummary } from '../lib/driver-rating.mjs'
 import { getDriverLocation, getRideCoords, etaMinutesBetween, haversineKm } from '../lib/live-map.mjs'
 import { capsuleProfile } from '../lib/capsule-profile.mjs'
+import { governmentCharges } from '../../wrapping/rides/smart-fare.mjs'
 import { waitState, noShowFeeMinor, withMinCancellationFee } from '../lib/ride-wait.mjs'
 import { countOffences, isOffenceBlocked, riderOffenceFeeMinor, restrictedError, offenceFeeMinor, offenceBlockThreshold, offenceWindowMs } from '../lib/ride-offences.mjs'
 import { signRideShareToken, verifyRideShareToken } from '../lib/ride-share.mjs'
@@ -691,6 +692,11 @@ export async function handleSrRides(req, res, url, context) {
     const deliveryOnly = Boolean(body.deliveryOnly)
 
     const finalFareMinor = quote.fareMinor - discountMinor + bonusMinor
+    // Government charges on the final fare (country setting; Québec: $0.90 dues + GST/QST, none for
+    // Syria). Snapshotted on the ride; the rider prepays fare + charges; the charges are recorded in
+    // the company's government accounts at completion and never shared with the driver.
+    const governmentChargesSnap = governmentCharges(finalFareMinor, capsuleProfile()?.rides?.market, 1)
+    const riderPaysMinor = governmentChargesSnap ? governmentChargesSnap.totalMinor : finalFareMinor
 
     const rideData = {
       riderId: context.user.id,
@@ -727,6 +733,7 @@ export async function handleSrRides(req, res, url, context) {
         pickupCode: generatePickupCode(),
         // Package delivery (gap-closure #4b): set after the spread for the same anti-injection reason.
         deliveryOnly,
+        ...(governmentChargesSnap ? { governmentCharges: governmentChargesSnap } : {}),
         // Pricing factors captured at booking time (audit trail of why this fare was charged).
         fareFactors: {
           baseFareMinor: quote.baseFareMinor,
@@ -791,7 +798,7 @@ export async function handleSrRides(req, res, url, context) {
         if (session.payment_status !== 'paid') throw notVerified('Card payment not completed.')
         if (!['guest_preride', 'client_preride'].includes(intentType)) throw notVerified('Payment session is not a ride payment.')
         if (owner !== context.user.id) throw notVerified('Payment session belongs to another rider.')
-        if (paidFareMinor < finalFareMinor) throw notVerified('Card payment does not cover this fare.')
+        if (paidFareMinor < riderPaysMinor) throw notVerified('Card payment does not cover this fare.')
         const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id
         if (!paymentIntentId) throw notVerified('Card payment reference missing.')
         // Master book: payment intent + wallet CREDIT (method stripe_card). The normal wallet debit
@@ -825,12 +832,12 @@ export async function handleSrRides(req, res, url, context) {
       // Sham Cash is a WALLET TOP-UP only (POST /api/wallet/topup-proof, credited by an admin after the transfer is verified):
       // a free-text reference never pays for or unlocks a ride.
 
-      if (!guestStripePrepaid && balanceMinor < finalFareMinor && !cardCovers) {
+      if (!guestStripePrepaid && balanceMinor < riderPaysMinor && !cardCovers) {
         const error = new Error('Add funds to your wallet to request this ride.')
         error.statusCode = 402
         error.code = 'RIDE_PREPAY_REQUIRED'
         error.expose = true
-        error.details = { requiredMinor: finalFareMinor, balanceMinor, shortfallMinor: finalFareMinor - balanceMinor, currency: rideCurrency }
+        error.details = { requiredMinor: riderPaysMinor, balanceMinor, shortfallMinor: riderPaysMinor - balanceMinor, currency: rideCurrency }
         throw error
       }
 
@@ -901,7 +908,7 @@ export async function handleSrRides(req, res, url, context) {
           await recordWalletEntry(tx, {
             userId: context.user.id,
             type: 'DEBIT',
-            amountMinor: finalFareMinor,
+            amountMinor: riderPaysMinor,
             currency: ride.currency,
             referenceType: 'ride_prepayment',
             referenceId: ride.id,
@@ -910,10 +917,10 @@ export async function handleSrRides(req, res, url, context) {
           })
           await tx.rideRequest.update({
             where: { id: ride.id },
-            data: { metadata: { ...ride.metadata, prepaid: true, prepaidAmountMinor: finalFareMinor } },
+            data: { metadata: { ...ride.metadata, prepaid: true, prepaidAmountMinor: riderPaysMinor } },
           })
         })
-        ride = { ...ride, metadata: { ...ride.metadata, prepaid: true, prepaidAmountMinor: finalFareMinor } }
+        ride = { ...ride, metadata: { ...ride.metadata, prepaid: true, prepaidAmountMinor: riderPaysMinor } }
       } catch (err) {
         if (err?.code !== 'WALLET_INSUFFICIENT_FUNDS' && err?.code !== 'WALLET_ENTRY_RACE_LOST') throw err
         // insufficient balance -> leave the ride unprepaid; it uses the post-ride proof path.
@@ -923,7 +930,7 @@ export async function handleSrRides(req, res, url, context) {
     // before any driver is offered. A decline cancels the ride and returns 402 (nothing dispatched).
     if (process.env.SR_REQUIRE_PREPAY === '1' && !shareable && finalFareMinor > 0 && !ride.metadata?.prepaid) {
       try {
-        const hold = await placeCardHold({ riderId: context.user.id, rideId: ride.id, amountMinor: finalFareMinor })
+        const hold = await placeCardHold({ riderId: context.user.id, rideId: ride.id, amountMinor: riderPaysMinor })
         const holdMeta = { ...ride.metadata, cardHoldIntentId: hold.intentId, cardHoldAmountMinor: hold.amountMinor }
         await db().rideRequest.update({ where: { id: ride.id }, data: { metadata: holdMeta } })
         ride = { ...ride, metadata: holdMeta }
