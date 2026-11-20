@@ -26,6 +26,12 @@ export function smsProviderStatus() {
   if (provider === 'http') {
     return { provider, configured: Boolean(process.env.SMS_HTTP_ENDPOINT && process.env.SMS_API_KEY), live: true }
   }
+  if (provider === 'brevo') {
+    return { provider, configured: Boolean(process.env.BREVO_API_KEY && process.env.SMS_SENDER_ID), live: true }
+  }
+  if (provider === 'twilio-verify') {
+    return { provider, configured: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_VERIFY_SERVICE_SID), live: true }
+  }
   return { provider, configured: false, live: true }
 }
 
@@ -96,6 +102,35 @@ export async function sendSms({ to, body, purpose }) {
     let data = {}
     try { data = await res.json() } catch { /* provider may return empty body */ }
     return { provider: 'http', messageId: data.messageId || data.id || `http-${Date.now()}`, delivered: true }
+  }
+
+  if (provider === 'brevo') {
+    // Brevo transactional SMS. Canadian delivery requires Brevo's approved toll-free sender first.
+    const apiKey = process.env.BREVO_API_KEY
+    const sender = process.env.SMS_SENDER_ID
+    if (!apiKey || !sender) {
+      const error = new Error('SMS provider is not configured for live delivery.')
+      error.statusCode = 503
+      error.code = 'SMS_PROVIDER_NOT_CONFIGURED'
+      error.expose = true
+      throw error
+    }
+    const res = await fetch('https://api.brevo.com/v3/transactionalSMS/sms', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json', 'api-key': apiKey },
+      body: JSON.stringify({ sender, recipient: String(to).replace(/\D/g, ''), content: body, type: 'transactional', tag: purpose || 'otp' }),
+    })
+    if (!res.ok) {
+      const error = new Error('SMS provider rejected the message.')
+      error.statusCode = 502
+      error.code = 'SMS_SEND_FAILED'
+      error.detail = `brevo ${res.status}`
+      error.expose = true
+      throw error
+    }
+    let data = {}
+    try { data = await res.json() } catch { /* empty body */ }
+    return { provider: 'brevo', messageId: String(data.messageId || data.reference || `brevo-${Date.now()}`), delivered: true }
   }
 
   const error = new Error(`Unknown SMS provider "${provider}".`)
