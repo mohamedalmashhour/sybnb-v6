@@ -129,9 +129,9 @@ export function resolveActivationMode(env = process.env) {
 let running = false
 /** In-process scheduler hook. Overlap-safe; unref'd so it never keeps the process alive. */
 const consoleLog = { info: (e, f) => console.log(JSON.stringify({ event: e, ...f })), error: (e, f) => console.error(JSON.stringify({ event: e, ...f })) }
-export function startActivationScheduler(client, { intervalMs = 60_000, log = consoleLog } = {}) {
+export function startActivationScheduler(client, { intervalMs = 60_000, log = consoleLog, shouldRun = () => true } = {}) {
   const tick = async () => {
-    if (running) return
+    if (running || !shouldRun()) return
     running = true
     try {
       const r = await runActivationCycle(client)
