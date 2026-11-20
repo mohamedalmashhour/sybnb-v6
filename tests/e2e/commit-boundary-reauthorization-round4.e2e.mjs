@@ -267,7 +267,9 @@ async function isInPayableSet(rideId) {
 // (server/routes/driver.mjs:119-163) rather than recomputed here.
 async function driverEarningsMinor(token) {
   const res = await call('GET', '/api/driver/rides', token)
-  return { status: res.status, earningsMinor: res.j?.overview?.totals?.earningsMinor, active: res.j?.overview?.totals?.active }
+  // The overview now splits billedMinor (gross fare of COMPLETED rides, what this suite tracks) from
+  // earningsMinor (money actually collected, net of commission). Read the billed total.
+  return { status: res.status, earningsMinor: res.j?.overview?.totals?.billedMinor, active: res.j?.overview?.totals?.active }
 }
 
 let refSeq = 0

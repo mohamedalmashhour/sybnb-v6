@@ -15,6 +15,7 @@
 // canonical regression, which deliberately leaves a ride mid-flight on whatever driver it used, so
 // a fixed id can't be assumed clean.
 
+import { makeDriverReady } from './_verified-driver.mjs'
 import { createSessionToken } from './_session.mjs'
 import { db, disconnectDb } from '../../server/lib/prisma.mjs'
 
@@ -68,6 +69,8 @@ async function run() {
     console.log('  SKIP  need 2 real ACTIVE drivers with zero active rides right now to run this suite')
     process.exit(0)
   }
+  await makeDriverReady(db(), driverId)
+  await makeDriverReady(db(), driver2Id)
   const riderAToken = await createSessionToken({ id: RIDER_A, roles: [{ role: 'GUEST' }] })
   const riderBToken = await createSessionToken({ id: RIDER_B, roles: [{ role: 'GUEST' }] })
   const driverToken = await createSessionToken({ id: driverId, roles: [{ role: 'DRIVER' }] })

@@ -54,6 +54,7 @@
 //
 // Run: node tests/e2e/commit-boundary-reauthorization-round3.e2e.mjs  (API_BASE default 127.0.0.1:3051)
 
+import { makeDriverReady } from './_verified-driver.mjs'
 import net from 'node:net'
 import { randomUUID } from 'node:crypto'
 import { db, disconnectDb } from '../../server/lib/prisma.mjs'
@@ -333,14 +334,8 @@ async function main() {
   await makeUser(ids.rider, ['GUEST'])
   await makeUser(ids.driver, ['DRIVER', 'GUEST'])
 
-  // Ride-safety gate: a driver must have an approved ID and an approved, inspected vehicle before
-  // accepting or being dispatched a ride (sr-rides.mjs). Make the fixture driver fully verified.
-  await db().user.update({ where: { id: ids.driver }, data: { idDocumentStatus: 'APPROVED' } })
-  await db().driverProfile.upsert({
-    where: { userId: ids.driver },
-    create: { userId: ids.driver, vehicleMake: 'Kia', vehicleModel: 'Rio', vehiclePlate: `E2E-${ids.driver.slice(0, 6)}`, vehicleStatus: 'APPROVED', vehicleCategory: 'ECONOMY', inspectionStatus: 'PASSED', inspectionExpiresAt: new Date(Date.now() + 864e5 * 30), registrationExpiresAt: new Date(Date.now() + 864e5 * 30), onDutyAt: new Date() },
-    update: {},
-  })
+  // Ride-safety gates (approved ID, approved vehicle on duty, all documents approved).
+  await makeDriverReady(db(), ids.driver)
   await makeUser(ids.bizAdmin, ['GUEST'])
 
   const OP = (await session(ids.operator)).token
@@ -479,13 +474,18 @@ async function main() {
     check('3d. DB: ride NOT cancelled', after.status === 'DRIVER_ASSIGNED', after.status)
     check('3e. DB: fare untouched', after.fareMinor === 50_000, String(after.fareMinor))
 
+    // Owner decision 2026-10-09: free cancel within the grace window (120 s) after assignment. Move the
+    // assignment time back past it so the control cancellation is a fee-bearing one.
+    await db().$executeRaw`UPDATE ride_requests SET updated_at = now() - interval '10 minutes' WHERE id = ${ride.id}::uuid`
     const fresh = (await session(ids.rider)).token
     const ok = await call('PATCH', `/api/sr/rides/${ride.id}/cancel`, fresh, undefined)
     check('3f. control: identical cancellation with a live session SUCCEEDS (200)', ok.status === 200, `${ok.status} ${JSON.stringify(ok.j).slice(0, 250)}`)
     const ctrl = await db().rideRequest.findUnique({ where: { id: ride.id } })
     check('3g. DB: control genuinely committed (CANCELLED)', ctrl.status === 'CANCELLED', ctrl.status)
-    check('3h. DB: control genuinely committed the REAL money field (20% of 50,000 = 10,000)',
-      ctrl.cancellationFeeMinor === 10_000, String(ctrl.cancellationFeeMinor))
+    // Late-cancel fee is 15% of the locked fare (owner decision 2026-10-09; RIDE_CANCELLATION_FEE_PERCENT).
+    const feePct = Number(process.env.RIDE_CANCELLATION_FEE_PERCENT) || 15
+    check(`3h. DB: control genuinely committed the REAL money field (${feePct}% of 50,000)`,
+      ctrl.cancellationFeeMinor === Math.round(50_000 * feePct / 100), String(ctrl.cancellationFeeMinor))
   }
 
   // =============================================================================================
@@ -665,10 +665,13 @@ async function main() {
       }
 
       check('6a-1. apply() was genuinely entered (the window under test was actually reached)', applyReached, 'apply never ran')
-      check('6a-2. the CLAIM had genuinely COMMITTED before the revocation (status APPLYING)',
-        claimSnapshot?.processingStatus === 'APPLYING', String(claimSnapshot?.processingStatus))
-      check('6a-3. and the claim had genuinely incremented attempts (2 -> 3) and held a token',
-        claimSnapshot?.attempts === 3 && Boolean(claimSnapshot?.claimToken), `attempts=${claimSnapshot?.attempts} token=${claimSnapshot?.claimToken}`)
+      // Round 5 merged the claim and the effects into ONE transaction (payment-event-pipeline.mjs), so a
+      // separate connection no longer sees an intermediate APPLYING claim: it still sees the pre-claim
+      // row. That is the stronger property round 5 asserts; round 3 now checks the same thing here.
+      check('6a-2. the claim is NOT visible outside its transaction (row still FAILED, single-transaction pipeline)',
+        claimSnapshot?.processingStatus === 'FAILED', String(claimSnapshot?.processingStatus))
+      check('6a-3. and attempts/token are unchanged from outside (2, no token)',
+        claimSnapshot?.attempts === 2 && !claimSnapshot?.claimToken, `attempts=${claimSnapshot?.attempts} token=${claimSnapshot?.claimToken}`)
       check('6a-4. the apply-phase re-authorization REFUSED the revoked actor', isBoundaryThrow(outcome), `${outcome?.code} ${outcome?.message?.slice(0, 120)}`)
       check('6a-5. and it was NOT a stranded-reversal error (the reversal itself applied cleanly)',
         outcome?.code !== 'PAYMENT_EVENT_REAUTH_REVERSAL_FAILED', String(outcome?.code))
@@ -888,6 +891,7 @@ async function main() {
     const ride2 = await db().rideRequest.create({
       data: { riderId: ids.rider, driverId: ids.driver, status: 'DRIVER_ASSIGNED', fareMinor: 20_000, currency: 'SYP' },
     })
+    await db().$executeRaw`UPDATE ride_requests SET updated_at = now() - interval '10 minutes' WHERE id = ${ride2.id}::uuid` // past the free-cancel grace window
     const t2Token = (await session(ids.rider)).token
     let pending
     await withTableLock('ride_requests', async () => {
@@ -899,7 +903,7 @@ async function main() {
     const t2 = await pending
     check('7c. T2 stalled request with authority intact SUCCEEDS (200)', t2.status === 200, `${t2.status} ${JSON.stringify(t2.j).slice(0, 250)}`)
     const t2Row = await db().rideRequest.findUnique({ where: { id: ride2.id } })
-    check('7d. DB: that mutation genuinely committed, fee and all', t2Row.status === 'CANCELLED' && t2Row.cancellationFeeMinor === 4_000, `${t2Row.status} / ${t2Row.cancellationFeeMinor}`)
+    check('7d. DB: that mutation genuinely committed, fee and all', t2Row.status === 'CANCELLED' && t2Row.cancellationFeeMinor === Math.round(20_000 * (Number(process.env.RIDE_CANCELLATION_FEE_PERCENT) || 15) / 100), `${t2Row.status} / ${t2Row.cancellationFeeMinor}`)
   }
 
   console.log(`\n=== SEC-002R ROUND 3 RESULT: ${pass} passed, ${fail} failed ===`)

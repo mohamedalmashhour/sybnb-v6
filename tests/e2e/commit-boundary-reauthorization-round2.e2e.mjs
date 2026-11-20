@@ -44,6 +44,7 @@
 //
 // Run: node tests/e2e/commit-boundary-reauthorization-round2.e2e.mjs  (API_BASE default 127.0.0.1:3051)
 
+import { makeDriverReady } from './_verified-driver.mjs'
 import net from 'node:net'
 import { randomUUID } from 'node:crypto'
 import { db, disconnectDb } from '../../server/lib/prisma.mjs'
@@ -292,14 +293,8 @@ async function main() {
   await makeUser(ids.kyc, ['GUEST'])
   await makeUser(ids.driver, ['DRIVER', 'GUEST'])
 
-  // Ride-safety gate: a driver must have an approved ID and an approved, inspected vehicle before
-  // accepting or being dispatched a ride (sr-rides.mjs). Make the fixture driver fully verified.
-  await db().user.update({ where: { id: ids.driver }, data: { idDocumentStatus: 'APPROVED' } })
-  await db().driverProfile.upsert({
-    where: { userId: ids.driver },
-    create: { userId: ids.driver, vehicleMake: 'Kia', vehicleModel: 'Rio', vehiclePlate: `E2E-${ids.driver.slice(0, 6)}`, vehicleStatus: 'APPROVED', vehicleCategory: 'ECONOMY', inspectionStatus: 'PASSED', inspectionExpiresAt: new Date(Date.now() + 864e5 * 30), registrationExpiresAt: new Date(Date.now() + 864e5 * 30), onDutyAt: new Date() },
-    update: {},
-  })
+  // Ride-safety gates (approved ID, approved vehicle on duty, all documents approved).
+  await makeDriverReady(db(), ids.driver)
   await makeUser(ids.bizAdmin, ['GUEST'])
   await makeUser(ids.bizMember, ['GUEST'])
 
@@ -1309,7 +1304,7 @@ async function main() {
   // up assigned. Reads no request body, so T2 on ride_requests.
   {
     const ride = await db().rideRequest.create({
-      data: { riderId: ids.guest2, status: 'REQUESTED', fareMinor: 50_000, currency: 'SYP' },
+      data: { riderId: ids.guest2, status: 'REQUESTED', fareMinor: 50_000, currency: 'SYP', metadata: { category: 'SR Economy' } }, // a category the fixture driver's vehicle serves
     })
     check('15-fixture: an unclaimed REQUESTED ride exists', ride.status === 'REQUESTED' && ride.driverId === null, ride.status)
 

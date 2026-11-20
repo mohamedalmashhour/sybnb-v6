@@ -17,10 +17,11 @@ assert_bridges() { # label  needle  expected-newline-list
 }
 
 echo "=== SERVER MASTER isolation (only sanctioned bridges may reach countries/) ==="
-# Allowed server bridges (post-Phase-7, no shims): profile loader + geo resolver seam.
+# Allowed server bridges (post-Phase-7, no shims): profile loader + geo resolver seam + capsule-profile
+# loader (wrapping/ capsule settings, owner direction 2026-11-20).
 SRV=$(grep -rlnE "from ['\"][^'\"]*countries/" server/ 2>/dev/null \
-  | grep -vE "server/lib/(country|geo-adapter)\.mjs" || true)
-[ -z "$SRV" ] && ok "server/ reaches countries/ only via country.mjs + geo-adapter.mjs" || no "server leak" "$SRV"
+  | grep -vE "server/lib/(country|geo-adapter|capsule-profile)\.mjs" || true)
+[ -z "$SRV" ] && ok "server/ reaches countries/ only via country.mjs + geo-adapter.mjs + capsule-profile.mjs" || no "server leak" "$SRV"
 
 echo "=== SERVER routes do NOT import a country module directly (use the neutral seam) ==="
 ROUTELEAK=$(grep -rlnE "from ['\"][^'\"]*countries/" server/routes/ 2>/dev/null || true)
