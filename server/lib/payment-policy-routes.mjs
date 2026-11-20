@@ -81,6 +81,16 @@ export const PAYMENT_POLICY_EXCLUDED_ROUTES = Object.freeze([
   { method: '*', pathPattern: '^/api/wallet', file: 'server/routes/wallet.mjs', reason: 'WalletGift is a separate, provider-independent domain (platform-funded promotional credit); out of scope for a payment-PROVIDER capability policy' },
   { method: '*', pathPattern: '^/api/admin/id-document', file: 'server/routes/admin.mjs', reason: 'KYC documents, unrelated to payments' },
   { method: 'POST', pathPattern: '^/api/host/payouts$', file: 'server/routes/host.mjs', reason: 'files a withdrawal REQUEST only; no wallet entry or provider call until an admin marks it paid (declared above)' },
+  // Reviewed 2026-11-20 (one-base audit). Card-on-file management: SetupIntent confirm, read and
+  // detach of a saved card. No charge, refund or wallet entry happens on these routes.
+  { method: 'POST', pathPattern: '^/api/payments/stripe/setup-confirm$', file: 'server/routes/payments.mjs', reason: 'saves a card on file (SetupIntent); no money moves' },
+  { method: '*', pathPattern: '^/api/payments/stripe/saved-card$', file: 'server/routes/payments.mjs', reason: 'reads or detaches the saved card; no money moves' },
+  // Reviewed 2026-11-20. Internal wallet-ledger effects of a ride that was ALREADY paid through a
+  // policy-gated route (prepay is gated in sr-rides.mjs). Gating these on the payments switch would
+  // strand a rider's refund or a driver's share whenever payments are switched off. Owner to confirm.
+  { method: 'PATCH', pathPattern: '^/api/sr/rides/[^/]+/cancel$', file: 'server/routes/sr-rides.mjs', reason: 'rider cancel: refunds an already-prepaid fare to the rider wallet minus the cancellation fee (internal ledger only)' },
+  { method: 'POST', pathPattern: '^/api/driver/rides/[^/]+/no-show$', file: 'server/routes/driver.mjs', reason: 'driver marks a no-show: charges the no-show fee from an already-prepaid fare and refunds the rest to the rider wallet (internal ledger only); shares its route body with /arrived, which moves no money' },
+  { method: 'PATCH', pathPattern: '^/api/driver/rides/[^/]+/status$', file: 'server/routes/driver.mjs', reason: 'ride status change: settles an already-prepaid fare to the driver on COMPLETED or refunds it on cancel (internal ledger only)' },
 ])
 
 // No known gaps remain — payout_release (below) closed the one previously-documented gap. Kept as

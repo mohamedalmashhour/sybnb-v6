@@ -34,8 +34,12 @@ function undeclaredLabels(result) {
     .filter((c) => c.kind !== 'unresolvable_trigger' && c.findings.some((f) => f.kind === 'money_moving') && !c.findings.some((f) => f.kind === 'policy_call'))
     .map((c) => c.label)
 }
+// An unrecognized dispatch shape is a gap only if its body can reach a money-moving (or dangerous
+// unresolvable) call; one that provably reaches neither cannot hide money movement.
 function unresolvableTriggerLabels(result) {
-  return result.chunks.filter((c) => c.kind === 'unresolvable_trigger').map((c) => c.label)
+  return result.chunks
+    .filter((c) => c.kind === 'unresolvable_trigger' && c.findings.some((f) => f.kind === 'money_moving' || f.kind === 'unresolvable'))
+    .map((c) => c.label)
 }
 function dangerousFindings(result) {
   return result.chunks.flatMap((c) => c.findings.filter((f) => f.kind === 'unresolvable'))
@@ -65,7 +69,7 @@ for (const file of routeFiles) {
   check(`${file} parses cleanly (AST, not regex)`, result.parseError === null, String(result.parseError))
   const gaps = undeclaredLabels(result).filter((label) => !isDeclaredExcluded(label))
   check(`${file} has zero undeclared money-moving routes (beyond documented exclusions)`, gaps.length === 0, JSON.stringify(gaps))
-  check(`${file} has zero unresolvable route-dispatch shapes`, unresolvableTriggerLabels(result).length === 0 && result.fileUnresolvableTriggers.length === 0, JSON.stringify({ chunks: unresolvableTriggerLabels(result), fileLevel: result.fileUnresolvableTriggers }))
+  check(`${file} has zero unresolvable route-dispatch shapes`, unresolvableTriggerLabels(result).length === 0 && result.unsafeFileTriggers.length === 0, JSON.stringify({ chunks: unresolvableTriggerLabels(result), fileLevel: result.unsafeFileTriggers }))
   check(`${file} has zero dangerous unresolvable calls (eval / Function / computed member call)`, dangerousFindings(result).length === 0, JSON.stringify(dangerousFindings(result)))
 }
 

@@ -187,7 +187,12 @@ export function collectImports(ast) {
   return map
 }
 
+// Local aliases of url.pathname (`const path = url.pathname`) in the function being analyzed.
+// Reset for every top-level function by the shallow pass.
+let PATHNAME_ALIASES = new Set()
+
 function isUrlPathnameMember(node) {
+  if (node?.type === 'Identifier' && PATHNAME_ALIASES.has(node.name)) return true
   return node?.type === 'MemberExpression' && !node.computed &&
     node.object?.type === 'Identifier' && node.object.name === 'url' &&
     node.property?.type === 'Identifier' && node.property.name === 'pathname'
@@ -242,6 +247,21 @@ function classifyIfTest(test, matchVars, consequent) {
   }
   if (test.type === 'Identifier' && matchVars.has(test.name)) {
     return { kind: 'regex', label: matchVars.get(test.name) }
+  }
+  // `ROUTE && cond` where ROUTE is a recognized positive route test and `cond` does not touch the
+  // path (typically `req.method === 'POST'`): that route, method-specific. Body analyzed as usual.
+  if (test.type === 'LogicalExpression' && test.operator === '&&' && !referencesUrlPathname(test.right)) {
+    const l = classifyIfTest(test.left, matchVars, consequent)
+    if (l && !l.guard) return { ...l, parts: [test.left] }
+  }
+  // `A || B` where BOTH sides are recognized positive route tests (two exact paths, or two match
+  // variables): one route body serving both paths. The body is analyzed exactly like a single route.
+  if (test.type === 'LogicalExpression' && test.operator === '||') {
+    const l = classifyIfTest(test.left, matchVars, consequent)
+    const r = classifyIfTest(test.right, matchVars, consequent)
+    if (l && r && !l.guard && !r.guard) {
+      return { kind: l.kind === r.kind ? l.kind : 'regex', label: `${l.label} | ${r.label}`, parts: [test.left, test.right] }
+    }
   }
   return null
 }
@@ -379,13 +399,20 @@ export function auditSource(source, { fileLabel = 'source', followImports = null
     if (!fn.body || fn.body.type !== 'BlockStatement') continue
     const stmts = fn.body.body
     const matchVars = new Map()
+    PATHNAME_ALIASES = new Set()
     for (let i = 0; i < stmts.length; i++) {
       const stmt = stmts[i]
       if (stmt.type === 'VariableDeclaration') {
         for (const decl of stmt.declarations) {
+          if (stmt.kind === 'const' && decl.id?.type === 'Identifier' && isUrlPathnameMember(decl.init)) {
+            PATHNAME_ALIASES.add(decl.id.name)
+            coveredPathnameRefs.add(decl.init) // the alias declaration itself is understood
+            continue
+          }
           if (decl.id?.type === 'Identifier' && decl.init?.type === 'CallExpression') {
             const chain = calleeChain(decl.init.callee)
-            if (chain && chain.join('.') === 'url.pathname.match' && decl.init.arguments[0]) {
+            const aliasMatch = chain && chain.length === 2 && PATHNAME_ALIASES.has(chain[0]) && chain[1] === 'match'
+            if (chain && (chain.join('.') === 'url.pathname.match' || aliasMatch) && decl.init.arguments[0]) {
               matchVars.set(decl.id.name, sourceSlice(source, decl.init.arguments[0]))
               coveredPathnameRefs.add(decl.init.callee.object) // the url.pathname member itself
             }
@@ -395,14 +422,20 @@ export function auditSource(source, { fileLabel = 'source', followImports = null
       }
       if (stmt.type !== 'IfStatement') continue
       const classified = classifyIfTest(stmt.test, matchVars, stmt.consequent)
-      if (classified?.kind === 'exact') {
+      if (classified?.parts) {
+        walk(stmt.test, (n) => { if (isUrlPathnameMember(n)) coveredPathnameRefs.add(n) })
+      } else if (classified?.kind === 'exact') {
         coveredPathnameRefs.add(isUrlPathnameMember(stmt.test.left) ? stmt.test.left : stmt.test.right)
       } else if (classified?.kind === 'regex' && classified.guard === 'negated') {
         coveredPathnameRefs.add(stmt.test) // the whole `!xMatch` — matchVars already covered xMatch's own declaration above
       } else if (!classified) {
         walk(stmt.test, (n) => { if (isUrlPathnameMember(n)) coveredPathnameRefs.add(n) })
         if (referencesUrlPathname(stmt.test) || [...matchVars.keys()].some((v) => referencesIdentifier(stmt.test, v))) {
-          chunks.push({ label: sourceSlice(source, stmt.test), kind: 'unresolvable_trigger', findings: [] })
+          // Still analyze what the unrecognized dispatch can reach, so a caller can tell a harmless
+          // shape (reaches no money-moving call) from one that hides money movement.
+          const reach = []
+          analyzeReachability(stmt.consequent, { fileKey: fileLabel, functionMap, importMap, getParsedFile }, 0, new Set(), reach)
+          chunks.push({ label: sourceSlice(source, stmt.test), kind: 'unresolvable_trigger', findings: reach })
         }
         continue
       }
@@ -413,6 +446,9 @@ export function auditSource(source, { fileLabel = 'source', followImports = null
       const routeBody = classified.guard === 'negated'
         ? { type: 'BlockStatement', body: stmts.slice(i + 1) }
         : stmt.consequent
+      // url.pathname read INSIDE a recognized route body (e.g. `.endsWith('/preview')` to pick a
+      // sub-mode) is part of that route, whose body is fully analyzed below — not a hidden dispatch.
+      walk(routeBody, (n) => { if (isUrlPathnameMember(n)) coveredPathnameRefs.add(n) })
       const findings = []
       const ctx = { fileKey: fileLabel, functionMap, importMap, getParsedFile }
       analyzeReachability(routeBody, ctx, 0, new Set(), findings)
@@ -422,9 +458,22 @@ export function auditSource(source, { fileLabel = 'source', followImports = null
 
   // Deep pass: any url.pathname reference NOT already understood above — e.g. a computed/template
   // dispatch buried in a nested conditional, or a helper-function-based router.
+  // Aliases are per-function (handled in the shallow pass above); the deep pass looks for raw
+  // url.pathname references only, so a stale alias set never mislabels another function's identifier.
+  PATHNAME_ALIASES = new Set()
   const fileUnresolvableTriggers = []
   walk(ast, (n) => {
     if (isUrlPathnameMember(n) && !coveredPathnameRefs.has(n)) fileUnresolvableTriggers.push(n.start)
+  })
+  // For each uncovered reference, can the top-level function that contains it reach ANY money-moving
+  // call (or a dangerous unresolvable call)? If not, the unrecognized dispatch cannot hide money
+  // movement. Fail-closed: a reference outside every top-level function counts as unsafe.
+  const unsafeFileTriggers = fileUnresolvableTriggers.filter((pos) => {
+    const fn = [...functionMap.values()].find((f) => f.body && f.start <= pos && pos < f.end)
+    if (!fn) return true
+    const reach = []
+    analyzeReachability(fn.body, { fileKey: fileLabel, functionMap, importMap, getParsedFile }, 0, new Set(), reach)
+    return reach.some((f) => f.kind === 'money_moving' || f.kind === 'unresolvable')
   })
 
   const ok = !chunks.some((c) =>
@@ -434,7 +483,7 @@ export function auditSource(source, { fileLabel = 'source', followImports = null
     orderViolation(c.findings)
   ) && fileUnresolvableTriggers.length === 0
 
-  return { ok, parseError: null, chunks, fileUnresolvableTriggers }
+  return { ok, parseError: null, chunks, fileUnresolvableTriggers, unsafeFileTriggers }
 }
 
 function referencesIdentifier(node, name) {

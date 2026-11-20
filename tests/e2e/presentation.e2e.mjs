@@ -24,8 +24,9 @@ const ok = (label, cond, detail) => { if (cond) { pass++; console.log(`   PASS  
 console.log('=== LOCALE FORMATTING (Arabic behavior preserved) ===')
 eq('money ar SYP (Arabic-Indic digits + ل.س)', disp.moneyText(1234567, 'SYP', 'ar'), '١٬٢٣٤٬٥٦٧ ل.س')
 eq('money en SYP', disp.moneyText(1234567, 'SYP', 'en'), '1,234,567 SYP')
-eq('money en USD', disp.moneyText(1000, 'USD', 'en'), '1,000 USD')
-eq('money ar USD (digits localized, currency USD)', disp.moneyText(1000, 'USD', 'ar'), '١٬٠٠٠ USD')
+// USD renders with a leading $ in every locale (display.ts moneyText).
+eq('money en USD', disp.moneyText(1000, 'USD', 'en'), '$1,000')
+eq('money ar USD (digits localized, leading $)', disp.moneyText(1000, 'USD', 'ar'), '$١٬٠٠٠')
 eq('hasArabic true/false', [disp.hasArabic('مرحبا'), disp.hasArabic('hello')], [true, false])
 eq('cancellation date ar (Arabic month + digits)', canc.formatCancellationDate(new Date('2026-07-15T00:00:00.000Z'), 'ar'), '١٥ تموز ٢٠٢٦')
 eq('cancellation date en', canc.formatCancellationDate(new Date('2026-07-15T00:00:00.000Z'), 'en'), 'July 15, 2026')

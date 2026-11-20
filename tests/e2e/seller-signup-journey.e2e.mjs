@@ -40,7 +40,7 @@ check('SELLER account created + session token (email-only)', Boolean(session && 
 console.log('\n=== NO CODE: seller signup needs only email + phone + password (owner decision 2026-10-16) ===')
 let noCodeSession = null
 try {
-  noCodeSession = await api.createSellerAccountSession({ displayName: 'No Code', email: `nocode-seller-${base}@sybnb.local`, phone: '+963944000111', password: 'StrongPass123', sellerRole: 'owner', planCode: 'plus' })
+  noCodeSession = await api.createSellerAccountSession({ displayName: 'No Code', email: `nocode-seller-${base}@sybnb.local`, phone: `+9639${String(base).slice(-8)}`, password: 'StrongPass123', sellerRole: 'owner', planCode: 'plus' })
 } catch (e) { noCodeSession = null }
 check('seller account opens without an emailed code', Boolean(noCodeSession && noCodeSession.token), 'seller signup still blocked')
 

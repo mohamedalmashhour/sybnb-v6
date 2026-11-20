@@ -20,6 +20,7 @@
 //     never a half-committed state.
 import Stripe from 'stripe'
 import { db } from '../lib/prisma.mjs'
+import { authorizePaymentOperation, policyEnvironment, activePolicyCountryKey } from '../lib/payment-policy.mjs'
 import { requireAuth } from '../lib/auth-context.mjs'
 import { json, readJson } from '../lib/responses.mjs'
 import { log } from '../lib/logger.mjs'
@@ -31,6 +32,14 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
 // Mirrors ride-auto-charge: never move real money on a live key unless payments are explicitly on.
 function depositChargeable() {
   if (!stripe) return false
+  // Central payment policy (country gates, payment switches, emergency stop) — same check the ride
+  // auto-charge runs before an off-session card charge. Denied => not chargeable (fails open to the
+  // offline fallback described at the top of this file; nothing is charged).
+  try {
+    authorizePaymentOperation({ operation: 'capture', rail: 'stripe_checkout', provider: 'stripe', division: 'CARS', country: activePolicyCountryKey(), environment: policyEnvironment(), actor: { roles: [] } })
+  } catch {
+    return false
+  }
   if (process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_') && process.env.PAYMENTS_ENABLED !== 'true') return false
   return true
 }
