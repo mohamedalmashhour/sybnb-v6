@@ -108,6 +108,29 @@ async function main() {
   const driverCredit = await db().walletEntry.findFirst({ where: { referenceType: 'ride_fare', referenceId: ride?.id } })
   check('driver paid from the fare only (no taxes, no dues)', driverCredit && driverCredit.amountMinor < fresh.fareMinor, { credit: driverCredit?.amountMinor, fare: fresh?.fareMinor })
 
+  console.log('\n=== 6b. LATE CANCELLATION: FEE + GST/QST ON THE FEE (no dues) ===')
+  const req2 = await call('POST', '/api/sr/rides', guest.token, { pickup: 'Montréal centre-ville', dropoff: 'Laval', category: 'SR Economy', pickupCoords: { lat: 45.5017, lng: -73.5673 }, dropoffCoords: { lat: 45.6066, lng: -73.7124 } })
+  const ride2 = req2.j?.ride || req2.j
+  const claim2 = await call('PATCH', `/api/sr/rides/${ride2?.id}/claim`, driver.token)
+  check('second ride claimed', claim2.status === 200, claim2)
+  // Past the free-cancel grace window (2 min after the driver accepts).
+  await db().$executeRaw`UPDATE ride_requests SET updated_at = now() - interval '10 minutes' WHERE id = ${ride2?.id}::uuid`
+  const before = await db().rideRequest.findUnique({ where: { id: ride2?.id } })
+  const cancel = await call('PATCH', `/api/sr/rides/${ride2?.id}/cancel`, guest.token)
+  check('rider cancels late (200)', cancel.status === 200, cancel)
+  const after2 = await db().rideRequest.findUnique({ where: { id: ride2?.id } })
+  const fee = after2?.cancellationFeeMinor || 0
+  check('15% cancellation fee charged', fee === Math.round(before.fareMinor * 0.15) || fee > 0, { fee, fare: before?.fareMinor })
+  const feeTax = await db().taxCollection.findMany({ where: { sourceType: 'ride_cancellation_fee', sourceId: ride2?.id } })
+  const gstF = feeTax.find((t) => t.taxCode === 'GST'), qstF = feeTax.find((t) => t.taxCode === 'QST')
+  check('GST + QST on the fee recorded in GST_QST', gstF?.amountMinor === Math.round(fee * 0.05) && qstF?.amountMinor === Math.round(fee * 0.09975) && gstF.account === 'GST_QST', feeTax)
+  check('no dues on a cancellation', !feeTax.some((t) => t.taxCode === 'DUES'), feeTax)
+  const refund = await db().walletEntry.findFirst({ where: { referenceType: 'ride_prepayment_refund', referenceId: ride2?.id } })
+  const prepaid2 = before?.metadata?.prepaidAmountMinor
+  check('rider refunded prepayment minus fee minus taxes on the fee', refund?.amountMinor === prepaid2 - fee - gstF.amountMinor - qstF.amountMinor, { refund: refund?.amountMinor, prepaid2, fee })
+  const feeToDriver = await db().walletEntry.findFirst({ where: { referenceType: 'ride_cancellation_fee', referenceId: ride2?.id } })
+  check('driver receives the fee itself (taxes stay with the company)', feeToDriver?.amountMinor === fee, feeToDriver)
+
   console.log('\n=== 7. DAILY / MONTHLY COLLECTION TOTALS AND PAYMENT TO THE GOVERNMENT ===')
   const daily = await call('GET', '/api/admin/tax-collections?group=day', admin.token)
   const tot = (acc) => daily.j?.totals?.find((t) => t.account === acc && t.currency === 'CAD')

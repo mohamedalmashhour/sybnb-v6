@@ -721,7 +721,20 @@ export async function refundPrepaidRide(tx, { ride }) {
   const prepaidMinor = Math.round((ride.metadata && ride.metadata.prepaidAmountMinor) || 0)
   if (prepaidMinor <= 0) return { refunded: false }
   const feeMinor = Math.min(prepaidMinor, Math.max(0, Math.round(ride.cancellationFeeMinor || 0)))
-  const riderRefundMinor = prepaidMinor - feeMinor
+  // Sales taxes on the cancellation fee (owner decision 2026-11-20; Québec: GST + QST at the ride's
+  // snapshotted rates). No per-trip dues: no trip happened. The taxes stay with the company in the
+  // GST-QST account; the driver still receives the fee itself. None for countries without ride taxes.
+  const rideTaxes = ride.metadata?.governmentCharges?.taxes || []
+  const feeTaxes = feeMinor > 0 ? rideTaxes.map((t) => ({ code: t.code, account: t.account || 'GST_QST', rateBp: t.rateBp, baseMinor: feeMinor, minor: Math.round((feeMinor * t.rateBp) / 10_000) })).filter((t) => t.minor > 0) : []
+  const feeTaxMinor = Math.min(prepaidMinor - feeMinor, feeTaxes.reduce((sum, t) => sum + t.minor, 0))
+  const riderRefundMinor = prepaidMinor - feeMinor - feeTaxMinor
+  if (feeTaxMinor > 0) {
+    const { capsuleProfile } = await import('./capsule-profile.mjs')
+    await tx.taxCollection.createMany({
+      data: feeTaxes.map((t) => ({ country: capsuleProfile()?.key || 'none', account: t.account, taxCode: t.code, sourceType: 'ride_cancellation_fee', sourceId: ride.id, baseMinor: t.baseMinor, rateBp: t.rateBp, amountMinor: t.minor, currency: ride.currency })),
+      skipDuplicates: true,
+    })
+  }
   if (riderRefundMinor > 0) {
     await recordWalletEntry(tx, {
       userId: ride.riderId,
@@ -746,7 +759,7 @@ export async function refundPrepaidRide(tx, { ride }) {
       note: 'Driver cancellation fee, settled from the rider prepayment (no commission).',
     })
   }
-  return { refunded: true, riderRefundMinor, feeMinor }
+  return { refunded: true, riderRefundMinor, feeMinor, feeTaxMinor }
 }
 
 // Cancellation/refund reversals used to re-derive "which admin to reverse" from
