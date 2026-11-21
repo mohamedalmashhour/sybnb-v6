@@ -87,6 +87,7 @@ test('Q EAT: apply → approve → menu → order → kitchen → courier → de
   assert.equal(offers.body.offers.length, 1)
   assert.equal(offers.body.offers[0].totalCents, undefined) // courier never sees what the customer pays
   assert.ok(offers.body.offers[0].pay.payoutCents >= 300)
+  assert.equal(offers.body.offers[0].address, null) // address only after the courier accepts
   assert.equal((await api('POST', `/api/eats/courier/orders/${oid}/claim`, { token: courierT })).status, 200)
   assert.equal((await api('POST', `/api/eats/courier/orders/${oid}/status`, { token: courierT, body: { status: 'PICKED_UP' } })).status, 409) // not ready yet
 

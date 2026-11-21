@@ -84,7 +84,8 @@ export function eatsRoutes(router, { profile }) {
     eta: o.etaLowMin ? { lowMin: o.etaLowMin, highMin: o.etaHighMin } : null,
     merchant: o.merchant ? { id: o.merchant.id, name: o.merchant.name, address: o.merchant.address, lat: o.merchant.lat, lng: o.merchant.lng, phone: viewer === 'customer' ? undefined : o.merchant.phone } : undefined,
     // The courier sees the drop-off and their own pay only — never the customer's total (Uber practice).
-    address: viewer === 'merchant' ? (o.address ? { label: o.address.label } : null) : o.address,
+    // Policy: merchant sees only the address label; courier sees it only while the delivery is theirs and active.
+    address: viewer === 'merchant' ? (o.address && D.ACTIVE.includes(o.status) ? { label: o.address.label } : null) : viewer === 'courier' ? (D.ACTIVE.includes(o.status) ? o.address : null) : o.address,
     courier: o.courier ? { name: o.courier.name, lat: o.courier.driver?.lat, lng: o.courier.driver?.lng, vehicle: o.courier.driver?.vehicle } : null,
     customer: viewer !== 'customer' && o.customer ? { name: o.customer.name } : undefined,
     ...(viewer === 'customer' ? { subtotalCents: o.subtotalCents, tipCents: o.tipCents, totalCents: o.totalCents, breakdown: { lines: o.breakdown.lines, taxes: o.breakdown.taxes, taxCents: o.breakdown.taxCents }, refundCents: o.refundCents, rating: o.rating } : {}),
@@ -306,7 +307,7 @@ export function eatsRoutes(router, { profile }) {
     const rows = await db().foodOrder.findMany({ where: { courierId: null, fulfillment: 'delivery', status: { in: COURIER_STATES } }, include: orderInclude, orderBy: { createdAt: 'asc' }, take: 50 })
     const offers = rows.map((o) => ({ o, d: D.rankCouriers({ merchantAt: { lat: o.merchant.lat, lng: o.merchant.lng }, profile: cp, couriers: [{ id: user.id, online: true, vehicle: 'car', at: { lat: me.lat, lng: me.lng } }] })[0] }))
       .filter((x) => x.d).sort((a, b) => a.d.distanceM - b.d.distanceM).slice(0, cp.delivery.maxOffers)
-    return { ok: true, offers: offers.map(({ o, d }) => ({ ...orderView(o, 'courier'), toMerchantM: d.distanceM })) }
+    return { ok: true, offers: offers.map(({ o, d }) => ({ ...orderView(o, 'courier'), address: null, note: null, customer: undefined, toMerchantM: d.distanceM, tripM: o.breakdown.distanceM ?? null })) }
   })
 
   router.add('GET /api/eats/courier/active', async ({ ctx }) => {
