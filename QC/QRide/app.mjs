@@ -229,7 +229,7 @@ async function trips() {
 
 // ---------------- Driver ----------------
 async function driver() {
-  const head = `<div class="sectionhead"><span class="eyebrow">${t('ESPACE CHAUFFEUR', 'DRIVER WORKSPACE')}</span><h1>${t('Conduisez avec QRide.', 'Drive with QRide.')}</h1></div>`
+  const head = `<div class="sectionhead"><span class="eyebrow">${t('ESPACE CHAUFFEUR', 'DRIVER WORKSPACE')}</span><h1>${t('Conduisez avec Q RIDE.', 'Drive with Q RIDE.')}</h1></div>`
   if (!api.user) {
     $('main').innerHTML = `${head}<section class="card"><p>${t('Connectez-vous pour déposer votre dossier chauffeur.', 'Sign in to submit your driver application.')}</p><button class="primary" id="drvSignIn">${t('Connexion', 'Sign in')}</button></section>`
     $('drvSignIn').onclick = async () => { if (await requireSignIn(api)) render() }
