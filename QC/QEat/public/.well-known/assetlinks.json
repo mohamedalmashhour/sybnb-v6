@@ -1,11 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "ca.qeat.app",
       "sha256_cert_fingerprints": [
-        "E5:F5:F9:0C:31:95:06:0A:47:20:FC:71:2D:EF:3F:3F:A5:67:9E:9B:B2:3E:A1:5B:9C:C9:97:44:10:EA:25:9E"
+        "E5:F5:F9:0C:31:95:06:0A:47:20:FC:71:2D:EF:3F:3F:A5:67:9E:9B:B2:3E:A1:5B:9C:C9:97:44:10:EA:25:9E",
+        "9D:D8:E2:3C:B3:F5:C2:97:24:D1:36:FF:48:13:C5:45:2F:D6:06:BF:FD:8C:D5:48:A0:FC:5B:DD:4E:A6:D4:C4"
       ]
     }
   }
