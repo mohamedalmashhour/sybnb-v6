@@ -7,6 +7,8 @@ export const i18n = {
 }
 export const t = (fr, en) => (i18n.lang === 'fr' ? fr : en)
 export const $ = (id) => document.getElementById(id)
+// "1 lit" / "2 lits" — French and English plural for a count.
+export const plural = (n, fr1, frN, en1, enN) => `${n} ${n > 1 || (i18n.lang === 'en' && n === 0) ? t(frN, enN) : t(fr1, en1)}`
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
 export const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c])
@@ -25,7 +27,7 @@ export function quebecDate(addDays = 0) {
 }
 
 export const errorText = (err) => (err?.code === 'NETWORK'
-  ? t('Le service QC est injoignable. Démarrez-le avec « npm run qc:api ».', 'The QC service is unreachable. Start it with "npm run qc:api".')
+  ? t('Service momentanément indisponible. Vérifiez votre connexion et réessayez.', 'Service temporarily unavailable. Check your connection and try again.')
   : err?.message || t('Une erreur est survenue.', 'Something went wrong.'))
 
 export const statusPill = (s) => `<span class="status status-${esc(String(s).toLowerCase())}">${esc(statusLabel(s))}</span>`
@@ -88,12 +90,17 @@ export function signIn(api, { reason } = {}) {
     }
     const step2 = () => {
       const body = openDialog(`<h2>${t('Entrez le code', 'Enter the code')}</h2>
-        <p>${t(`Un code à 6 chiffres a été envoyé à ${esc(email)}. Il expire dans 10 minutes.`, `A 6-digit code was sent to ${esc(email)}. It expires in 10 minutes.`)}</p>
+        <p>${t(`Un code à 6 chiffres a été envoyé à ${esc(email)}. Il expire dans 10 minutes. Vérifiez aussi vos courriels indésirables.`, `A 6-digit code was sent to ${esc(email)}. It expires in 10 minutes. Check your spam folder too.`)}</p>
         <form class="form" id="codeForm"><label>${t('Code', 'Code')}<input id="authCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label>
         <p class="error" id="authError" role="alert"></p>
-        <div class="row"><button type="button" class="secondary" id="authBack">${t('Changer de courriel', 'Change email')}</button><button class="primary" id="authVerify">${t('Se connecter', 'Sign in')}</button></div></form>`)
+        <div class="row"><button type="button" class="secondary" id="authBack">${t('Changer de courriel', 'Change email')}</button><button class="primary" id="authVerify">${t('Se connecter', 'Sign in')}</button></div>
+        <button type="button" class="linkish" id="authResend">${t('Renvoyer le code', 'Resend code')}</button></form>`)
       body.querySelector('#authCode').focus()
       body.querySelector('#authBack').onclick = step1
+      body.querySelector('#authResend').onclick = (e) => busy(e.target, body.querySelector('#authError'), async () => {
+        await api.post('/api/auth/code', { email, locale: i18n.lang })
+        body.querySelector('#authError').textContent = t('Nouveau code envoyé.', 'New code sent.')
+      })
       body.querySelector('#codeForm').onsubmit = (e) => {
         e.preventDefault()
         busy(body.querySelector('#authVerify'), body.querySelector('#authError'), async () => {
@@ -116,7 +123,7 @@ export function accountBar(api, onChange) {
   const el = document.createElement('div')
   el.className = 'account'
   if (api.user) {
-    el.innerHTML = `<span class="small">${esc(api.user.email)}</span><button class="lang" id="signOut">${t('Déconnexion', 'Sign out')}</button>`
+    el.innerHTML = `<span class="avatarBtn" title="${esc(api.user.email)}" aria-label="${esc(api.user.email)}">${esc((api.user.name || api.user.email || '?')[0].toUpperCase())}</span><button class="lang" id="signOut">${t('Déconnexion', 'Sign out')}</button>`
     el.querySelector('#signOut').onclick = async () => { await api.logout(); onChange() }
   } else {
     el.innerHTML = `<button class="lang" id="signInBtn">${t('Connexion', 'Sign in')}</button>`
@@ -211,6 +218,33 @@ button:disabled{opacity:.55;cursor:progress}
 .lines .total{font-weight:750;font-size:17px;border-bottom:0}
 .stack{display:grid;gap:18px}
 @media(max-width:760px){.reviewItem{flex-direction:column;align-items:flex-start}.listing{grid-template-columns:1fr}}
+.linkish{background:none;border:0;color:var(--green);text-decoration:underline;padding:6px 0;justify-self:start;font-size:13px}
+.avatarBtn{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#fff;font-weight:750;font-size:14px}
+.footer{flex-wrap:wrap}.footer span{display:block}
+.countdown{font-weight:750;color:var(--ink)}
+.confirmHead{display:flex;gap:12px;align-items:center}.check{width:44px;height:44px;border-radius:50%;background:var(--lime);display:grid;place-items:center;font-size:22px;color:var(--green);flex:none}
+.amenities{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.amenities label{flex-direction:row;display:flex;align-items:center;gap:8px;font-weight:500;font-size:14px}.amenities input{width:auto}
+.suggest{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.suggest button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:8px 14px}
+.stickybar{display:none}
+@media(max-width:760px){
+  body{padding-bottom:76px}
+  .shell{padding:14px 16px}
+  header{padding-bottom:14px;flex-wrap:nowrap}
+  .brand{white-space:nowrap;font-size:22px}.brand span{display:none}
+  .nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 4px calc(6px + env(safe-area-inset-bottom));gap:0;width:auto;order:0}
+  .nav button{flex:1;font-size:12px;padding:10px 4px;border-radius:12px}
+  .account .lang{padding:8px 10px;font-size:12px}
+  .demo{font-size:11px;padding:6px 12px}
+  .table,.table tbody,.table tr,.table td{display:block;width:100%}
+  .table thead{display:none}
+  .table tr{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:12px;background:#fff}
+  .table td{border:0;padding:4px 0}
+  .table td:empty{display:none}
+  .table td button{margin-top:6px;margin-right:6px}
+  .stickybar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));align-items:center;justify-content:space-between;gap:12px}
+  body.hasSticky .nav{display:none}
+  .resultsFirst{display:flex;flex-direction:column-reverse}
+}
 `
 
 // Reads and removes a one-time query parameter set by the Stripe return URLs.

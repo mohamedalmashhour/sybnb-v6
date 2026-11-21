@@ -2,7 +2,7 @@
 import { createApi } from '../shared/api.mjs'
 import {
   $, SHARED_CSS, accountBar, busy, cad, closeDialog, errorText, esc, pctText, fmtDate, fmtDateTime, i18n, installDialog, message,
-  openDialog, quebecDate, takeParam, renderApplication, renderApplicationsReview, requireSignIn, statusPill, t,
+  openDialog, plural, quebecDate, takeParam, renderApplication, renderApplicationsReview, requireSignIn, statusPill, t,
 } from '../shared/ui.mjs'
 
 const api = createApi('qtr')
@@ -38,6 +38,7 @@ function chrome() {
 window.addEventListener('qc:auth', chrome)
 
 async function render() {
+  document.body.classList.remove('hasSticky')
   chrome()
   try {
     if (state.page === 'stay') await (state.listingId ? listingDetail() : search())
@@ -53,7 +54,7 @@ async function search() {
   const s = state.search
   $('main').innerHTML = `<div class="sectionhead"><span class="eyebrow">Q STAY · QUÉBEC</span><h1>${t('Un séjour.<br>Un accueil local.', 'A stay.<br>A local welcome.')}</h1>
     <p>${t('Des logements enregistrés et vérifiés avant publication, avec un prix total clair.', 'Registered places reviewed before publication, with a clear total price.')}</p></div>
-    <div class="grid"><section class="card"><form class="form" id="stayForm">
+    <div class="grid resultsFirst"><section class="card"><form class="form" id="stayForm">
       <label>${t('Ville', 'City')}<input id="city" value="${esc(s.city)}"></label>
       <div class="row"><label>${t('Arrivée', 'Check-in')}<input id="checkIn" type="date" min="${quebecDate()}" value="${esc(s.checkIn)}" required></label>
       <label>${t('Départ', 'Check-out')}<input id="checkOut" type="date" min="${quebecDate(1)}" value="${esc(s.checkOut)}" required></label></div>
@@ -68,9 +69,11 @@ async function search() {
     $('resultsTitle').textContent = `${t('Résultats', 'Results')} (${listings.length})`
     $('results').innerHTML = listings.length
       ? listings.map((l) => `<button class="listing" data-listing="${l.id}">${photo(l)}<div><h3>${esc(l.title)}</h3>
-          <p class="small">${esc(l.city)} · ${l.maxGuests} ${t('voyageurs', 'guests')} · ${l.bedrooms} ${t('ch.', 'bd')} · ${l.beds} ${t('lits', 'beds')}</p>
+          <p class="small">${esc(l.city)} · ${plural(l.maxGuests, 'voyageur', 'voyageurs', 'guest', 'guests')} · ${plural(l.bedrooms, 'chambre', 'chambres', 'bedroom', 'bedrooms')} · ${plural(l.beds, 'lit', 'lits', 'bed', 'beds')}</p>
           <b>${cad(l.nightlyCents)}</b> <span class="small">/ ${t('nuit', 'night')}</span></div></button>`).join('')
-      : `<p>${t('Aucun logement disponible pour ces dates.', 'No places available for these dates.')}</p>`
+      : `<p>${t('Aucun logement disponible pour ces dates. Essayez une autre ville ou d’autres dates.', 'No places available for these dates. Try another city or other dates.')}</p>
+         <div class="suggest">${['Montréal', 'Québec', 'Laval', ''].map((c) => `<button type="button" data-city="${esc(c)}">${c ? esc(c) : t('Toutes les villes', 'All cities')}</button>`).join('')}</div>`
+    document.querySelectorAll('[data-city]').forEach((b) => { b.onclick = () => { s.city = b.dataset.city; $('city').value = s.city; busy(b, null, run) } })
     document.querySelectorAll('[data-listing]').forEach((b) => { b.onclick = () => go('stay', { listingId: b.dataset.listing }) })
   }
   $('stayForm').onsubmit = (e) => {
@@ -97,30 +100,37 @@ async function listingDetail() {
   $('main').innerHTML = `<button class="secondary" id="back">← ${t('Retour aux résultats', 'Back to results')}</button>
     <div class="grid" style="margin-top:20px"><article class="card">${l.photos.length ? `<img class="photo" src="${esc(l.photos[0])}" alt="">` : PLACEHOLDER}
       <h1 style="font-size:34px">${esc(l.title)}</h1>
-      <p>${esc(l.city)} · ${l.maxGuests} ${t('voyageurs', 'guests')} · ${l.bedrooms} ${t('chambres', 'bedrooms')} · ${l.beds} ${t('lits', 'beds')} · ${l.bathrooms} ${t('salles de bain', 'baths')}</p>
+      <p>${esc(l.city)} · ${plural(l.maxGuests, 'voyageur', 'voyageurs', 'guest', 'guests')} · ${plural(l.bedrooms, 'chambre', 'chambres', 'bedroom', 'bedrooms')} · ${plural(l.beds, 'lit', 'lits', 'bed', 'beds')} · ${plural(l.bathrooms, 'salle de bain', 'salles de bain', 'bath', 'baths')}</p>
       <p style="white-space:pre-line">${esc(l.description)}</p>
       ${l.amenities.length ? `<p>${l.amenities.map((a) => `<span class="pill">${esc(a)}</span>`).join(' ')}</p>` : ''}
       <p class="small">${t('N° d’enregistrement CITQ', 'CITQ registration no.')} : <b>${esc(l.registrationNumber)}</b></p>
       ${unavailable.length ? `<p class="small">${t('Dates indisponibles', 'Unavailable dates')} : ${unavailable.map((u) => `${fmtDate(u.start)} → ${fmtDate(u.end)}`).join(' · ')}</p>` : ''}
     </article>
     <section class="card"><div class="price">${cad(l.nightlyCents)} <span class="small">/ ${t('nuit', 'night')}</span></div>
-      <p class="small">${t(`Minimum ${l.minNights} nuit(s)`, `Minimum ${l.minNights} night(s)`)}</p>
+      <p class="small">${t('Minimum', 'Minimum')} ${plural(l.minNights, 'nuit', 'nuits', 'night', 'nights')}</p>
       <form class="form" id="quoteForm"><div class="row"><label>${t('Arrivée', 'Check-in')}<input id="qIn" type="date" min="${quebecDate()}" value="${esc(s.checkIn)}" required></label>
       <label>${t('Départ', 'Check-out')}<input id="qOut" type="date" min="${quebecDate(1)}" value="${esc(s.checkOut)}" required></label></div>
       <label>${t('Voyageurs', 'Guests')}<input id="qGuests" type="number" min="1" max="${l.maxGuests}" value="${Math.min(s.guests, l.maxGuests)}" required></label></form>
       <div id="quote"></div><p class="error" id="bookError" role="alert"></p>
       <button class="primary" id="bookBtn" disabled>${t('Réserver', 'Reserve')}</button>
-      <p class="small">${t('Annulation gratuite jusqu’à 72 h avant l’arrivée (heure du Québec), puis remboursement de 50 % jusqu’à l’arrivée.', 'Free cancellation until 72 h before check-in (Québec time), then a 50% refund until check-in.')}</p></section></div>`
+      <p class="small">${t('Annulation gratuite jusqu’à 72 h avant l’arrivée (heure du Québec), puis remboursement de 50 % jusqu’à l’arrivée.', 'Free cancellation until 72 h before check-in (Québec time), then a 50% refund until check-in.')}</p></section></div>
+    <div class="stickybar"><div><b id="stickyTotal">${cad(l.nightlyCents)}</b><div class="small" id="stickySub">/ ${t('nuit', 'night')}</div></div><button class="primary" id="stickyBook" disabled>${t('Réserver', 'Reserve')}</button></div>`
+  document.body.classList.add('hasSticky')
   $('back').onclick = () => go('stay', { listingId: null })
+  $('stickyBook').onclick = () => $('bookBtn').click()
   const params = () => ({ checkIn: $('qIn').value, checkOut: $('qOut').value, guests: Number($('qGuests').value) })
   const refresh = async () => {
     $('bookBtn').disabled = true
+    $('stickyBook').disabled = true
     $('bookError').textContent = ''
     Object.assign(s, params())
     try {
       const { quote } = await api.post(`/api/stays/${l.id}/quote`, params())
       $('quote').innerHTML = quoteLines(quote)
       $('bookBtn').disabled = false
+      $('stickyBook').disabled = false
+      $('stickyTotal').textContent = cad(quote.totalCents)
+      $('stickySub').textContent = `${t('total', 'total')} · ${plural(quote.lines[0].nights, 'nuit', 'nuits', 'night', 'nights')}`
     } catch (err) { $('quote').innerHTML = ''; $('bookError').textContent = errorText(err) }
   }
   ;['qIn', 'qOut', 'qGuests'].forEach((id) => { $(id).onchange = refresh })
@@ -137,17 +147,38 @@ async function listingDetail() {
 // Hold → payment. Payment confirmation goes through the provider once enabled.
 function checkout(booking) {
   const body = openDialog(`<h2>${t('Finaliser la réservation', 'Complete your booking')}</h2>
-    <p>${t('Vos dates sont retenues jusqu’à', 'Your dates are held until')} <b>${fmtDateTime(booking.holdExpiresAt)}</b>.</p>
+    <p>${t('Vos dates sont retenues encore', 'Your dates are held for')} <span class="countdown" id="holdLeft"></span> (${t('jusqu’à', 'until')} ${fmtDateTime(booking.holdExpiresAt)}).</p>
     ${quoteLines(booking.quote)}<p class="error" id="payError" role="alert"></p>
     <div class="row"><button class="secondary" id="payLater">${t('Plus tard', 'Later')}</button><button class="primary" id="payNow">${t('Payer', 'Pay')} ${cad(booking.totalCents)}</button></div>`)
+  const tick = () => {
+    const left = new Date(booking.holdExpiresAt) - Date.now()
+    const el = body.querySelector('#holdLeft')
+    if (!el) return clearInterval(timer)
+    el.textContent = left > 0 ? `${Math.floor(left / 60000)} min ${String(Math.floor(left / 1000) % 60).padStart(2, '0')} s` : t('expiré', 'expired')
+  }
+  const timer = setInterval(tick, 1000); tick()
   body.querySelector('#payLater').onclick = () => { closeDialog(); go('trips') }
   body.querySelector('#payNow').onclick = () => busy(body.querySelector('#payNow'), body.querySelector('#payError'), async () => {
     const { booking: b, checkoutUrl } = await api.post(`/api/bookings/${booking.id}/checkout`)
     if (checkoutUrl) { location.assign(checkoutUrl); return }
-    closeDialog()
-    message(t('Réservation confirmée', 'Booking confirmed'), t(`Votre séjour du ${fmtDate(b.checkIn)} au ${fmtDate(b.checkOut)} est confirmé. Adresse : ${b.listing.address}`, `Your stay from ${fmtDate(b.checkIn)} to ${fmtDate(b.checkOut)} is confirmed. Address: ${b.listing.address}`))
+    confirmed(b)
     go('trips')
   })
+}
+
+// Confirmation: dates, address with map link, calendar file and receipt.
+function confirmed(b) {
+  const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${b.listing.address}, ${b.listing.city ?? ''}`)}`
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Q STAY//FR', 'BEGIN:VEVENT', `UID:${b.id}@qstay.ca`,
+    `DTSTART;VALUE=DATE:${b.checkIn.replaceAll('-', '')}`, `DTEND;VALUE=DATE:${b.checkOut.replaceAll('-', '')}`,
+    `SUMMARY:Q STAY – ${b.listing.title}`, `LOCATION:${b.listing.address}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n')
+  const body = openDialog(`<div class="confirmHead"><div class="check">✓</div><h2 style="margin:0">${t('Réservation confirmée', 'Booking confirmed')}</h2></div>
+    <p><b>${esc(b.listing.title)}</b><br>${fmtDate(b.checkIn)} → ${fmtDate(b.checkOut)}</p>
+    <p>${t('Adresse', 'Address')} : <b>${esc(b.listing.address)}</b><br><a href="${maps}" target="_blank" rel="noopener">${t('Voir sur la carte', 'Open in Maps')}</a></p>
+    ${b.quote ? quoteLines(b.quote) : ''}
+    <div class="row" style="margin-top:16px"><a class="secondary" style="text-align:center;text-decoration:none" download="qstay-${b.id.slice(0, 8)}.ics" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}">${t('Ajouter au calendrier', 'Add to calendar')}</a>
+    <button class="primary" id="dlgOk">OK</button></div>`)
+  body.querySelector('#dlgOk').onclick = closeDialog
 }
 
 // ---------------- Guest: bookings ----------------
@@ -236,6 +267,9 @@ async function calendar(listingId) {
   try { await draw() } catch (err) { el.innerHTML = `<p class="error">${esc(errorText(err))}</p>` }
 }
 
+const AMENITIES = [['Wi-Fi', 'Wi-Fi'], ['Cuisine', 'Kitchen'], ['Chauffage', 'Heating'], ['Climatisation', 'Air conditioning'], ['Laveuse', 'Washer'], ['Sécheuse', 'Dryer'],
+  ['Stationnement gratuit', 'Free parking'], ['Télévision', 'TV'], ['Espace de travail', 'Workspace'], ['Animaux acceptés', 'Pets allowed'], ['Accès sans marches', 'Step-free access'], ['Détecteur de fumée', 'Smoke alarm']]
+
 function listingForm(l) {
   const v = (k, d = '') => esc(l?.[k] ?? d)
   $('main').innerHTML = `<button class="secondary" id="back">← ${t('Mes logements', 'My listings')}</button>
@@ -255,11 +289,13 @@ function listingForm(l) {
       <div class="row"><label>${t('Prix par nuit (CAD)', 'Nightly price (CAD)')}<input name="nightly" type="number" min="10" step="0.01" required value="${l ? (l.nightlyCents / 100).toFixed(2) : ''}"></label>
       <label>${t('Frais de ménage (CAD)', 'Cleaning fee (CAD)')}<input name="cleaning" type="number" min="0" step="0.01" value="${l ? (l.cleaningCents / 100).toFixed(2) : '0'}"></label>
       <label>${t('Nuits min.', 'Min nights')}<input name="minNights" type="number" min="1" max="30" value="${v('minNights', 1)}"></label></div>
-      <label>${t('Équipements (séparés par des virgules)', 'Amenities (comma separated)')}<input name="amenities" value="${esc((l?.amenities ?? []).join(', '))}"></label>
+      <fieldset style="border:0;padding:0;margin:0"><legend class="small" style="font-weight:700;margin-bottom:8px">${t('Équipements', 'Amenities')}</legend><div class="amenities">
+        ${AMENITIES.map(([fr, en]) => `<label><input type="checkbox" name="amenity" value="${esc(fr)}" ${(l?.amenities ?? []).some((a) => a === fr || a === en) ? 'checked' : ''}>${t(fr, en)}</label>`).join('')}</div>
+        <label style="margin-top:8px">${t('Autres (séparés par des virgules)', 'Other (comma separated)')}<input name="amenities" value="${esc((l?.amenities ?? []).filter((a) => !AMENITIES.some(([fr, en]) => a === fr || a === en)).join(', '))}"></label></fieldset>
       <label>${t('Photos (URL https, une par ligne)', 'Photos (https URLs, one per line)')}<textarea name="photos" rows="3">${esc((l?.photos ?? []).join('\n'))}</textarea></label>
       <p class="error" id="listingError" role="alert"></p><button class="primary" id="saveListing">${t('Enregistrer', 'Save')}</button></form></section>
     <section class="card"><h2>${t('Emplacement', 'Location')}</h2><p class="small">${t('Touchez la carte pour placer le logement, ou saisissez la latitude et la longitude.', 'Tap the map to place the listing, or enter latitude and longitude.')}</p>
-      <div id="qtrGoogleMap" class="map"><p class="small" style="padding:16px">${t('Carte Google : clé requise (VITE_GOOGLE_MAPS_BROWSER_KEY).', 'Google map: key required (VITE_GOOGLE_MAPS_BROWSER_KEY).')}</p></div></section></div>`
+      <div id="qtrGoogleMap" class="map"><p class="small" style="padding:16px">${t('La carte s’affichera ici.', 'The map will appear here.')}</p></div></section></div>`
   $('back').onclick = () => go('host', { editing: null })
   const form = $('listingForm')
   form.onsubmit = (e) => {
@@ -269,7 +305,7 @@ function listingForm(l) {
       title: f.title, description: f.description, address: f.address, city: f.city, registrationNumber: f.registrationNumber || null,
       lat: Number(f.lat), lng: Number(f.lng), maxGuests: Number(f.maxGuests), bedrooms: Number(f.bedrooms), beds: Number(f.beds), bathrooms: Number(f.bathrooms),
       nightlyCents: Math.round(Number(f.nightly) * 100), cleaningCents: Math.round(Number(f.cleaning || 0) * 100), minNights: Number(f.minNights || 1),
-      amenities: f.amenities.split(',').map((s) => s.trim()).filter(Boolean), photos: f.photos.split('\n').map((s) => s.trim()).filter(Boolean),
+      amenities: [...new FormData(form).getAll('amenity'), ...f.amenities.split(',').map((s) => s.trim()).filter(Boolean)], photos: f.photos.split('\n').map((s) => s.trim()).filter(Boolean),
     }
     busy($('saveListing'), $('listingError'), async () => {
       if (l) await api.patch(`/api/host/listings/${l.id}`, body)
@@ -320,7 +356,7 @@ async function afterStripe() {
   for (let i = 0; i < 20; i++) {
     const { booking: b } = await api.get(`/api/bookings/${paid}`).catch(() => ({}))
     if (b?.status === 'CONFIRMED') {
-      message(t('Réservation confirmée', 'Booking confirmed'), t(`Votre séjour du ${fmtDate(b.checkIn)} au ${fmtDate(b.checkOut)} est confirmé. Adresse : ${b.listing.address}`, `Your stay from ${fmtDate(b.checkIn)} to ${fmtDate(b.checkOut)} is confirmed. Address: ${b.listing.address}`))
+      confirmed(b)
       return
     }
     if (b && b.status !== 'HOLD') break

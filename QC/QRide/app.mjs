@@ -32,6 +32,7 @@ function parsePlace(value) {
   return null
 }
 
+const CATEGORY = { STANDARD: ['Standard · 1–4 places', 'Standard · 1–4 seats'], COMFORT: ['Confort · 1–4 places', 'Comfort · 1–4 seats'], XL: ['XL · 1–6 places', 'XL · 1–6 seats'] }
 const placeLabel = (p) => esc(p?.label || `${p?.lat?.toFixed(4)}, ${p?.lng?.toFixed(4)}`)
 const km = (m) => `${(m / 1000).toFixed(1)} km`
 const mins = (s) => `${Math.max(1, Math.round(s / 60))} min`
@@ -109,7 +110,7 @@ async function ride() {
       <div class="row" id="schedulePanel" hidden><label>${t('Date', 'Date')}<input id="sDate" type="date" min="${quebecDate()}" max="${quebecDate(30)}" value="${esc(f.date)}"></label><label>${t('Heure (Québec)', 'Time (Québec)')}<input id="sTime" type="time" value="${esc(f.time)}"></label></div>
       <p class="error" id="rideError" role="alert"></p>
       <button class="primary" id="quoteBtn">${t('Voir le prix', 'See price')}</button></form></section>
-    <section class="card"><div id="qrideGoogleMap" class="map"><p class="small" style="padding:16px">${t('Carte Google : clé requise. Touchez la carte pour remplir le champ sélectionné.', 'Google map: key required. Tap the map to fill the selected field.')}</p></div><div id="quoteBox" class="quote"></div></section></div>`
+    <section class="card"><div id="qrideGoogleMap" class="map"><p class="small" style="padding:16px">${t('Choisissez un lieu dans la liste ou utilisez votre position.', 'Pick a place from the list or use your location.')}</p></div><div id="quoteBox" class="quote"></div></section></div>`
   $('category').value = f.category
   $('when').value = f.when
   $('schedulePanel').hidden = f.when !== 'schedule'
@@ -146,7 +147,7 @@ function showQuote() {
   const q = state.quote
   const b = q.breakdown
   const expired = new Date(q.expiresAt) <= new Date()
-  $('quoteBox').innerHTML = `<div class="fare"><div><b>${esc(q.category)}</b><div class="small">${km(q.distanceM)} · ~${mins(q.durationS)} · ${t('estimation', 'estimate')}</div></div><div class="price">${cad(q.totalCents)}</div></div>
+  $('quoteBox').innerHTML = `<div class="fare"><div><b>${esc(CATEGORY[q.category] ? t(...CATEGORY[q.category]) : q.category)}</b><div class="small">${km(q.distanceM)} · ~${mins(q.durationS)} · ${t('estimation', 'estimate')}</div></div><div class="price">${cad(q.totalCents)}</div></div>
     <div class="lines">${b.lines.map((l) => `<div class="fare"><span>${l.code === 'FARE' ? t('Course', 'Fare') + (l.minimumApplied ? ` (${t('minimum', 'minimum')})` : '') : t('Frais de réservation', 'Booking fee')}</span><span>${cad(l.cents)}</span></div>`).join('')}
     ${b.taxes.map((x) => `<div class="fare"><span>${esc(x.label[i18n.lang] ?? x.code)}</span><span>${cad(x.cents)}</span></div>`).join('')}
     <div class="fare total"><span>Total (CAD)</span><span>${cad(b.totalCents)}</span></div></div>
