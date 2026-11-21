@@ -34,4 +34,23 @@ for (const l of listings) {
   })
 }
 console.log('Seeded: host@qc.local (HOST, 3 published listings), driver@qc.local (DRIVER, STANDARD, QCD001)')
+// Q EAT demo restaurants (clearly marked as demo; no real orders or payments).
+const resto = await user('resto@qc.local', 'Restaurateur Démo', ['GUEST', 'MERCHANT'])
+const demoMerchants = [
+  { name: 'Casse-croûte du Plateau (démo)', category: 'fastfood', address: '4400 rue Saint-Denis, Montréal', lat: 45.5245, lng: -73.5822, prepMinutes: 15,
+    items: [['Poutines', 'Poutine classique', 1195, 'Lait'], ['Poutines', 'Poutine italienne', 1395, 'Lait, gluten'], ['Burgers', 'Burger maison', 1495, 'Gluten, lait, œuf'], ['Boissons', 'Limonade', 395, null]] },
+  { name: 'Bagels Mile End (démo)', category: 'bakery', address: '120 rue Saint-Viateur O, Montréal', lat: 45.5230, lng: -73.6005, prepMinutes: 10,
+    items: [['Bagels', 'Bagel sésame (6)', 900, 'Gluten, sésame'], ['Bagels', 'Bagel saumon fumé', 1250, 'Gluten, poisson, lait'], ['Café', 'Café filtre', 300, null]] },
+  { name: 'Pho Centre-Ville (démo)', category: 'restaurant', address: '1050 boul. Saint-Laurent, Montréal', lat: 45.5080, lng: -73.5610, prepMinutes: 20,
+    items: [['Soupes', 'Pho au bœuf', 1450, 'Soja'], ['Soupes', 'Pho végé', 1350, 'Soja'], ['Entrées', 'Rouleaux impériaux (2)', 650, 'Gluten']] },
+]
+for (const dm of demoMerchants) {
+  let m = await db().merchant.findFirst({ where: { ownerId: resto.id, name: dm.name } })
+  if (!m) {
+    m = await db().merchant.create({ data: { ownerId: resto.id, name: dm.name, category: dm.category, address: dm.address, lat: dm.lat, lng: dm.lng, prepMinutes: dm.prepMinutes, status: 'APPROVED', permitNumber: 'DEMO-MAPAQ', neq: '0000000000', description: 'Restaurant de démonstration — environnement de test, aucune commande réelle.' } })
+    let sort = 0
+    for (const [section, name, priceCents, allergens] of dm.items) await db().menuItem.create({ data: { merchantId: m.id, section, name, priceCents, allergens, sort: sort++ } })
+  }
+}
+console.log('Seeded: resto@qc.local (MERCHANT, 3 demo restaurants)')
 await disconnectDb()

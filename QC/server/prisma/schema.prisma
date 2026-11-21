@@ -16,6 +16,7 @@ enum Role {
   HOST
   DRIVER
   ADMIN
+  MERCHANT
 
   @@map("qc_role")
 }
@@ -94,6 +95,9 @@ model User {
   rideQuotes   RideQuote[]
   ridesAsRider Ride[]            @relation("rider")
   ridesAsDriver Ride[]           @relation("driver")
+  merchants     Merchant[]
+  foodOrders    FoodOrder[]       @relation("customer")
+  deliveries    FoodOrder[]       @relation("courier")
 
   @@map("qc_users")
 }
@@ -351,4 +355,116 @@ model AuditLog {
 
   @@index([action, at])
   @@map("qc_audit_log")
+}
+
+
+// ── Q EAT (food delivery, Uber Eats model) — business rules in wrapping/delivery ──
+enum MerchantStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+
+  @@map("qc_merchant_status")
+}
+
+enum OrderStatus {
+  PAYMENT_PENDING
+  PLACED
+  ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  PICKED_UP
+  DELIVERED
+  REJECTED
+  CANCELLED
+  UNDELIVERABLE
+
+  @@map("qc_order_status")
+}
+
+model Merchant {
+  id            String         @id @default(uuid()) @db.Uuid
+  ownerId       String         @map("owner_id") @db.Uuid
+  name          String
+  category      String
+  description   String?
+  address       String
+  lat           Float
+  lng           Float
+  phone         String?
+  radiusM       Int            @default(6000) @map("radius_m")
+  prepMinutes   Int            @default(20) @map("prep_minutes")
+  minOrderCents Int?           @map("min_order_cents")
+  hours         Json?
+  busy          Boolean        @default(false)
+  status        MerchantStatus @default(PENDING_REVIEW)
+  // Québec onboarding documents (numbers only; files handled offline until storage is chosen).
+  permitNumber  String?        @map("permit_number")
+  neq           String?
+  gstNumber     String?        @map("gst_number")
+  qstNumber     String?        @map("qst_number")
+  photo         String?
+  reviewNote    String?        @map("review_note")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  owner         User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items         MenuItem[]
+  orders        FoodOrder[]
+
+  @@index([status])
+  @@map("qc_merchants")
+}
+
+model MenuItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  merchantId  String   @map("merchant_id") @db.Uuid
+  section     String   @default("Menu")
+  name        String
+  description String?
+  priceCents  Int      @map("price_cents")
+  allergens   String?
+  available   Boolean  @default(true)
+  sort        Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  merchant    Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@map("qc_menu_items")
+}
+
+model FoodOrder {
+  id            String      @id @default(uuid()) @db.Uuid
+  customerId    String      @map("customer_id") @db.Uuid
+  merchantId    String      @map("merchant_id") @db.Uuid
+  courierId     String?     @map("courier_id") @db.Uuid
+  status        OrderStatus @default(PLACED)
+  fulfillment   String      @default("delivery")
+  items         Json
+  address       Json?
+  note          String?
+  subtotalCents Int         @map("subtotal_cents")
+  tipCents      Int         @default(0) @map("tip_cents")
+  totalCents    Int         @map("total_cents")
+  breakdown     Json
+  etaLowMin     Int?        @map("eta_low_min")
+  etaHighMin    Int?        @map("eta_high_min")
+  refundCents   Int?        @map("refund_cents")
+  cancelledBy   String?     @map("cancelled_by")
+  rating        Int?
+  ratingComment String?     @map("rating_comment")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  acceptedAt    DateTime?   @map("accepted_at")
+  readyAt       DateTime?   @map("ready_at")
+  pickedUpAt    DateTime?   @map("picked_up_at")
+  deliveredAt   DateTime?   @map("delivered_at")
+  cancelledAt   DateTime?   @map("cancelled_at")
+  customer      User        @relation("customer", fields: [customerId], references: [id])
+  courier       User?       @relation("courier", fields: [courierId], references: [id])
+  merchant      Merchant    @relation(fields: [merchantId], references: [id])
+
+  @@index([merchantId, status])
+  @@index([customerId, createdAt])
+  @@index([courierId, status])
+  @@map("qc_food_orders")
 }

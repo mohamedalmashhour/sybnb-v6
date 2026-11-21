@@ -7,6 +7,7 @@ import { accountRoutes } from './routes/account.mjs'
 import { adminRoutes } from './routes/admin.mjs'
 import { rideRoutes } from './routes/rides.mjs'
 import { stayRoutes } from './routes/stays.mjs'
+import { eatsRoutes } from './routes/eats.mjs'
 
 export function createHandler({ corsOrigins = [] } = {}) {
   const router = createRouter()
@@ -23,6 +24,7 @@ export function createHandler({ corsOrigins = [] } = {}) {
   accountRoutes(router, { profile })
   stayRoutes(router, { profile })
   rideRoutes(router, { profile })
+  eatsRoutes(router, { profile })
   adminRoutes(router)
 
   return async function handle(req, res) {
