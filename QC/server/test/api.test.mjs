@@ -187,6 +187,15 @@ test('ride: quote, request, single-winner dispatch, lifecycle and safety record'
   rideId = ride.body.ride.id
   assert.equal((await api('POST', '/api/rides', { token: guest, body: { quoteId: quote.body.quote.id } })).body.error.code, 'QUOTE_EXPIRED')
 
+  // Request map: online drivers nearby, blurred positions, no identity, no sign-in.
+  const nearby = await api('GET', '/api/rides/nearby?lat=45.5&lng=-73.57&category=STANDARD')
+  assert.equal(nearby.status, 200)
+  assert.ok(nearby.body.count >= 1)
+  assert.deepEqual(Object.keys(nearby.body.cars[0]).sort(), ['lat', 'lng'])
+  assert.equal((await api('GET', '/api/rides/nearby?lat=10&lng=10')).body.count, 0)
+  assert.equal((await api('POST', '/api/driver/photo', { token: driverA, body: { photo: 'not-an-image' } })).body.error.code, 'INVALID_PHOTO')
+  const tinyJpeg = 'data:image/jpeg;base64,' + Buffer.from('fake-jpeg-bytes').toString('base64')
+  for (const token of [driverA, driverB]) assert.equal((await api('POST', '/api/driver/photo', { token, body: { photo: tinyJpeg } })).status, 200)
   const offers = await api('GET', '/api/driver/offers', { token: driverA })
   assert.equal(offers.body.offers[0].id, rideId)
   assert.equal(offers.body.offers[0].breakdown.totalCents, undefined)
@@ -225,6 +234,7 @@ test('ride: quote, request, single-winner dispatch, lifecycle and safety record'
   assert.equal((await api('POST', `/api/rides/${rideId}/tip`, { token: guest, body: { cents: 300 } })).body.tipCents, 300)
   assert.equal((await api('POST', `/api/rides/${rideId}/tip`, { token: guest, body: { cents: 300 } })).body.error.code, 'CANNOT_TIP')
   assert.equal(view.body.ride.driver.vehicle.plate.length, 6)
+  assert.equal(view.body.ride.driver.photo, tinyJpeg)
   assert.equal((await api('GET', `/api/rides/${rideId}`, { token: guest2 })).status, 404)
   const earnings = await api('GET', '/api/driver/rides', { token: winner })
   assert.equal(earnings.body.earningsCents, b.driver.payoutCents + 300)

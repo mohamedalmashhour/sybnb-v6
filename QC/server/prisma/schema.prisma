@@ -148,6 +148,8 @@ model DriverProfile {
   insuranceExpiry DateTime     @map("insurance_expiry") @db.Date
   online          Boolean      @default(false)
   acceptsPets     Boolean      @default(false) @map("accepts_pets")
+  // Small profile photo (JPEG data URL, ≤ 200 KB) shown to the rider once the trip is accepted.
+  photo           String?
   accessible      Boolean      @default(false)
   lat             Float?
   lng             Float?

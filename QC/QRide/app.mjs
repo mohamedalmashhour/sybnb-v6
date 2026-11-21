@@ -6,6 +6,7 @@ import {
 } from '../shared/ui.mjs'
 
 const api = createApi('qride')
+window.qrideApi = api
 const state = { page: 'ride', quote: null, activeRideId: null, historyId: null, health: null, form: { pickup: '', dropoff: '', category: 'STANDARD', when: 'now', date: '', time: '', pet: false, accessible: false }, catalog: null, driverPos: '' }
 let poll = null
 const ACTIVE = ['PAYMENT_PENDING', 'REQUESTED', 'ACCEPTED', 'ARRIVED', 'IN_PROGRESS']
@@ -18,7 +19,13 @@ document.head.insertAdjacentHTML('beforeend', `<style>${SHARED_CSS}
 .pinBox{display:grid;gap:4px;background:#fff;border:2px solid var(--green);border-radius:16px;padding:14px 16px;margin-top:16px}.pinBox b{font-size:36px;letter-spacing:10px;font-family:ui-monospace,monospace}
 .sos{background:#c62828;color:#fff;border:0;border-radius:12px;padding:13px 18px;font-weight:800;letter-spacing:1px}
 .stars{display:flex;gap:6px;margin:6px 0 10px}.stars button{font-size:32px;background:none;border:0;color:#cfd5df;padding:0 2px}.stars button.on{color:#f5a623}
-.starmini{background:none;border:0;color:#f5a623;font-size:16px;padding:0 1px}</style>`)
+.starmini{background:none;border:0;color:#f5a623;font-size:16px;padding:0 1px}
+.liveMap{min-height:300px;border-radius:18px;overflow:hidden;margin-top:16px}
+.qbadge{background:#fff;border-radius:20px;padding:7px 12px;font:600 13px system-ui;box-shadow:0 1px 6px rgba(0,0,0,.2);color:#13294b}
+.qcar,.qpin{background:none;border:0}
+.driverPanel{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin-top:14px}
+.driverPhoto{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none}.driverPhoto.initial{display:grid;place-items:center;background:var(--lime);font-weight:800;font-size:22px}
+.driverInfo{flex:1;min-width:0}.photoRow{display:flex;align-items:center;gap:12px}.photoBtn{cursor:pointer;text-align:center;flex:1;border:1px solid var(--line);border-radius:14px;padding:10px;font-weight:600;font-size:14px}.bigPlate{font-family:ui-monospace,monospace;font-weight:800;font-size:18px;letter-spacing:2px;border:2px solid var(--ink);border-radius:8px;padding:6px 8px;background:#fff}</style>`)
 
 // Known places for quick entry; the map, "my location" and "lat, lng" also work.
 const PLACES = [
@@ -111,7 +118,7 @@ async function ride() {
   if (state.activeRideId) return liveRide()
   const f = state.form
   $('main').innerHTML = `<datalist id="places">${PLACES.map(([n]) => `<option value="${esc(n)}">`).join('')}</datalist>
-    <div class="grid hero"><section><span class="eyebrow">QRIDE · QUÉBEC</span><h1>${t('Votre ville.<br>Votre prochaine course.', 'Your city.<br>Your next ride.')}</h1>
+    <div class="grid hero resultsFirst"><section><span class="eyebrow">QRIDE · QUÉBEC</span><h1>${t('Votre ville.<br>Votre prochaine course.', 'Your city.<br>Your next ride.')}</h1>
     <p>${t('Voyez le prix total, taxes incluses, avant de confirmer.', 'See the total price, taxes included, before you confirm.')}</p>
     <form class="form" id="rideForm">
       <label>${t('Départ', 'Pickup')}<input id="pickup" list="places" required value="${esc(f.pickup)}" placeholder="${t('Lieu, ou « lat, lng »', 'Place, or "lat, lng"')}"></label>
@@ -126,8 +133,10 @@ async function ride() {
       <p class="error" id="rideError" role="alert"></p>
       <button class="primary" id="quoteBtn">${t('Voir le prix', 'See price')}</button></form></section>
     <section class="card"><div id="qrideGoogleMap" class="map"><p class="small" style="padding:16px">${t('Choisissez un lieu dans la liste ou utilisez votre position.', 'Pick a place from the list or use your location.')}</p></div><div id="quoteBox" class="quote"></div></section></div>`
+  window.qridePlaces = PLACES
   $('category').value = f.category
   $('when').value = f.when
+  window.dispatchEvent(new CustomEvent('qride:render'))
   $('schedulePanel').hidden = f.when !== 'schedule'
   $('when').onchange = () => { $('schedulePanel').hidden = $('when').value !== 'schedule' }
   $('myLocation').onclick = () => locate($('pickup'), $('locationStatus'))
@@ -212,14 +221,17 @@ async function liveRide() {
   const draw = async () => {
     const { ride: r } = await api.get(`/api/rides/${state.activeRideId}`)
     if (!ACTIVE.includes(r.status)) stopPoll()
-    const nextSignature = JSON.stringify([r.status, r.events?.length, i18n.lang])
-    if (nextSignature === signature) return
+    window.qrideRide = r
+    const nextSignature = JSON.stringify([r.status, r.events?.length, i18n.lang, r.myRating, r.tipCents])
+    if (nextSignature === signature) { window.dispatchEvent(new CustomEvent('qride:ride', { detail: r })); return }
     signature = nextSignature
     $('main').innerHTML = `<div class="grid hero"><section><span class="eyebrow">${t('COURSE EN DIRECT', 'LIVE RIDE')}</span>
       <h1>${r.status === 'REQUESTED' ? t('Recherche d’un<br>chauffeur…', 'Finding your<br>driver…') : r.status === 'PAYMENT_PENDING' ? t('Confirmation du<br>paiement…', 'Confirming<br>payment…') : statusLabel(r.status)}</h1>
       ${r.status === 'PAYMENT_PENDING' ? `<p>${t('Le montant est autorisé sur votre carte et prélevé seulement à la fin de la course.', 'The amount is authorized on your card and charged only when the trip ends.')}</p>` : ''}
       ${ACTIVE.includes(r.status) ? `<div class="live"><span class="dot"></span><span class="small">${t('Mise à jour automatique', 'Updating automatically')}</span></div>` : ''}
       ${ACTIVE.includes(r.status) ? `<p class="notice" role="note">● ${recordedNotice()}</p>` : ''}
+      ${ACTIVE.includes(r.status) && r.status !== 'PAYMENT_PENDING' ? `<div id="liveMap" class="map liveMap"></div>` : ''}
+      ${r.driver && ACTIVE.includes(r.status) ? driverPanel(r.driver) : ''}
       ${r.driver && ACTIVE.includes(r.status) ? `<p class="notice">${t('Vérifiez le nom, le véhicule et la plaque avant de monter.', 'Check the name, vehicle and plate before boarding.')}</p>` : ''}
       ${r.pickupPin && ['REQUESTED', 'ACCEPTED', 'ARRIVED'].includes(r.status) ? `<div class="pinBox"><span class="small">${t('Votre code de prise en charge', 'Your pickup code')}</span><b>${esc(r.pickupPin)}</b><span class="small">${t('Donnez-le au chauffeur une fois à bord. Ne montez pas si le chauffeur ne vous le demande pas.', 'Give it to the driver once on board. Don’t ride if the driver doesn’t ask for it.')}</span></div>` : ''}
       ${ACTIVE.includes(r.status) && r.status !== 'PAYMENT_PENDING' ? `<div class="row" style="margin-top:14px"><button class="secondary" id="shareTrip">${t('Partager mon trajet', 'Share my trip')}</button>${['ACCEPTED', 'ARRIVED', 'IN_PROGRESS'].includes(r.status) ? `<button class="sos" id="sosBtn">SOS</button>` : ''}</div>` : ''}
@@ -235,9 +247,20 @@ async function liveRide() {
     $('shareTrip')?.addEventListener('click', () => shareTrip(r))
     $('sosBtn')?.addEventListener('click', (e) => sos(e.target, r.id))
     wireEndOfTrip(r, () => { signature = ''; draw() })
+    window.dispatchEvent(new CustomEvent('qride:render'))
   }
   await draw()
   startPoll(draw, 4000)
+}
+
+// Uber-style driver panel: photo, name, rating, car and a large plate to check before boarding.
+function driverPanel(d) {
+  const v = d.vehicle ?? {}
+  return `<div class="driverPanel">
+    ${d.photo ? `<img class="driverPhoto" src="${esc(d.photo)}" alt="${esc(d.name)}">` : `<div class="driverPhoto initial">${esc((d.name || '?')[0])}</div>`}
+    <div class="driverInfo"><b>${esc(d.name)}</b>${d.rating ? ` <span class="small">★ ${d.rating.average} (${d.rating.count})</span>` : ` <span class="small">${t('Nouveau chauffeur', 'New driver')}</span>`}
+      <div class="small">${esc(v.colour)} ${esc(v.make)} ${esc(v.model)} ${v.year ? `· ${esc(v.year)}` : ''}</div></div>
+    <div class="bigPlate">${esc(v.plate)}</div></div>`
 }
 
 function shareTrip(r) {
@@ -351,7 +374,7 @@ async function driver() {
     const [{ rides, earningsCents, tipsCents, driver: me }, offersRes] = await Promise.all([api.get('/api/driver/rides'), api.get('/api/driver/offers').catch((err) => ({ error: err }))])
     const active = rides.find((r) => ['ACCEPTED', 'ARRIVED', 'IN_PROGRESS'].includes(r.status))
     if (document.activeElement?.closest?.('#main form')) return // don't redraw under the driver's typing
-    const nextSignature = JSON.stringify([rides.map((r) => [r.id, r.status, r.events?.length]), offersRes.offers?.map((o) => [o.id, o.pickupDistanceM]), offersRes.error?.code, me.online, i18n.lang])
+    const nextSignature = JSON.stringify([rides.map((r) => [r.id, r.status, r.events?.length, r.myRating]), offersRes.offers?.map((o) => [o.id, o.pickupDistanceM]), offersRes.error?.code, me.online, me.acceptsPets, me.accessible, me.hasPhoto, i18n.lang])
     if (nextSignature === signature) return
     signature = nextSignature
     const next = { ACCEPTED: ['arrive', t('Je suis arrivé', 'I have arrived')], ARRIVED: ['start', t('Commencer la course', 'Start trip')], IN_PROGRESS: ['complete', t('Terminer la course', 'Complete trip')] }
@@ -362,6 +385,8 @@ async function driver() {
         <label>${t('Ma position', 'My position')}<input id="drvPos" list="places" value="${esc(state.driverPos)}" placeholder="${t('Lieu, ou « lat, lng »', 'Place, or "lat, lng"')}"></label>
         <div class="row"><button type="button" class="secondary" id="drvLocate">${t('Utiliser ma position', 'Use my location')}</button><button class="primary" id="goOnline">${t('Être en ligne', 'Go online')}</button><button type="button" class="secondary" id="goOffline">${t('Hors ligne', 'Go offline')}</button></div>
         <div class="row options"><label class="check"><input type="checkbox" id="optPets" ${me.acceptsPets ? 'checked' : ''}> ${t('J’accepte les animaux', 'I accept pets')}</label><label class="check"><input type="checkbox" id="optAcc" ${me.accessible ? 'checked' : ''}> ${t('Véhicule accessible', 'Accessible vehicle')}</label></div>
+        <div class="photoRow">${me.photo ? `<img class="driverPhoto" src="${esc(me.photo)}" alt="">` : `<div class="driverPhoto initial">${esc((api.user.name || api.user.email || '?')[0].toUpperCase())}</div>`}
+          <label class="secondary photoBtn">${me.photo ? t('Changer ma photo', 'Change my photo') : t('Ajouter ma photo (vue par les passagers)', 'Add my photo (shown to riders)')}<input type="file" id="drvPhoto" accept="image/*" hidden></label></div>
         <p class="small" id="drvStatus" role="status">${me.online ? `<span class="status">${t('En ligne', 'Online')}</span>` : `<span class="status status-cancelled">${t('Hors ligne', 'Offline')}</span>`} · ${esc(me.category)} · ${esc(me.vehicle?.make)} ${esc(me.vehicle?.model)} <span class="plate">${esc(me.vehicle?.plate)}</span>${me.rating ? ` · ★ ${me.rating} (${me.ratingCount})` : ''}</p></form></div>
       ${active ? `<div class="card"><h2>${t('Course en cours', 'Current ride')}</h2>${rideCard(active, { asDriver: true })}
         <p class="notice" role="note">● ${recordedNotice()}</p>
@@ -390,6 +415,13 @@ async function driver() {
     $('statusForm').onsubmit = setStatus(true)
     $('goOffline').onclick = setStatus(false)
     $('drvLocate').onclick = () => locate($('drvPos'), $('drvStatus'))
+    $('drvPhoto').onchange = (e) => busy(e.target.closest('label'), $('drvStatus'), async () => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      await api.post('/api/driver/photo', { photo: await squarePhoto(file, 320) })
+      signature = ''; await draw()
+    })
+    trackDriver(me.online)
     document.querySelectorAll('[data-accept]').forEach((b) => { b.onclick = () => busy(b, null, async () => { await api.post(`/api/driver/rides/${b.dataset.accept}/accept`); await draw() }) })
     $('advance')?.addEventListener('click', (e) => busy(e.target, $('advanceError'), async () => {
       await api.post(`/api/driver/rides/${active.id}/${next[active.status][0]}`, active.status === 'ARRIVED' ? { pin: $('ridePin').value.trim() } : undefined)
@@ -402,6 +434,34 @@ async function driver() {
   }
   await draw()
   startPoll(draw, 5000)
+}
+
+// While a driver is online, send the phone's GPS position every ~10 s so riders see the car move.
+let gpsWatch, lastSent = 0
+function trackDriver(online) {
+  if (!online || !navigator.geolocation) { if (gpsWatch != null) navigator.geolocation?.clearWatch(gpsWatch); gpsWatch = undefined; return }
+  if (gpsWatch != null) return
+  gpsWatch = navigator.geolocation.watchPosition((p) => {
+    if (Date.now() - lastSent < 10_000 || state.page !== 'driver') return
+    lastSent = Date.now()
+    api.post('/api/driver/status', { online: true, lat: p.coords.latitude, lng: p.coords.longitude }).catch(() => {})
+  }, () => {}, { enableHighAccuracy: true, maximumAge: 5000 })
+}
+
+// Crop to a centred square and shrink to `size` px JPEG (keeps uploads well under 200 KB).
+function squarePhoto(file, size) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const s = Math.min(img.width, img.height)
+      const c = Object.assign(document.createElement('canvas'), { width: size, height: size })
+      c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size)
+      URL.revokeObjectURL(img.src)
+      resolve(c.toDataURL('image/jpeg', 0.82))
+    }
+    img.onerror = () => reject(new Error(t('Image illisible.', 'Unreadable image.')))
+    img.src = URL.createObjectURL(file)
+  })
 }
 
 // ---------------- Admin ----------------

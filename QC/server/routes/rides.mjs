@@ -43,7 +43,7 @@ const rideView = (r, viewer) => ({
   myRating: viewer === 'driver' ? r.driverRating : r.riderRating, ratedByOther: viewer === 'driver' ? r.riderRating != null : r.driverRating != null,
   totalCents: r.totalCents, breakdown: viewer === 'driver' ? { driver: r.breakdown.driver, currency: 'CAD' } : r.breakdown,
   createdAt: r.createdAt, acceptedAt: r.acceptedAt, completedAt: r.completedAt, cancelledBy: r.cancelledBy,
-  driver: r.driver ? { name: r.driver.name, vehicle: r.driver.driver?.vehicle, category: r.driver.driver?.category, lat: r.driver.driver?.lat, lng: r.driver.driver?.lng, rating: r.driverRatingSummary } : null,
+  driver: r.driver ? { name: r.driver.name, vehicle: r.driver.driver?.vehicle, category: r.driver.driver?.category, lat: r.driver.driver?.lat, lng: r.driver.driver?.lng, rating: r.driverRatingSummary, photo: viewer === 'driver' ? undefined : r.driver.driver?.photo } : null,
   rider: viewer === 'driver' && r.rider ? { name: r.rider.name } : undefined,
   events: r.events?.map((e) => ({ type: e.type, at: e.at, data: e.data })),
 })
@@ -82,6 +82,22 @@ export function rideRoutes(router, { profile }) {
     options: { petFeeCents: profile.rides.options?.petFeeCents ?? 0, accessible: Boolean(profile.rides.options?.accessible), maxTipCents: profile.rides.options?.maxTipCents ?? 0 },
     regulatoryFee: profile.rides.regulatoryFee ?? null,
   }))
+
+  // Cars available around a point, for the request map. Positions are blurred (~150 m) and carry no
+  // identity; only drivers seen in the last 2 minutes count. No sign-in needed (Uber shows this too).
+  router.add('GET /api/rides/nearby', async ({ query }) => {
+    const lat = num(query.lat, 'lat', { min: -90, max: 90 })
+    const lng = num(query.lng, 'lng', { min: -180, max: 180 })
+    const category = query.category && profile.rides.categories[query.category] ? query.category : undefined
+    const since = new Date(Date.now() - 2 * 60_000)
+    const box = 0.06 // ≈ 6 km
+    const drivers = await db().driverProfile.findMany({
+      where: { online: true, lastSeenAt: { gte: since }, lat: { gte: lat - box, lte: lat + box }, lng: { gte: lng - box, lte: lng + box }, ...(category ? { category } : {}) },
+      select: { lat: true, lng: true }, take: 30,
+    })
+    const blur = () => (Math.random() - 0.5) * 0.003
+    return { ok: true, count: drivers.length, cars: drivers.slice(0, 15).map((d) => ({ lat: Math.round((d.lat + blur()) * 1e4) / 1e4, lng: Math.round((d.lng + blur()) * 1e4) / 1e4 })) }
+  })
 
   // Public, read-only trip view for a contact the rider shared the link with. No prices, no PIN.
   router.add('GET /api/share/:token', async ({ params }) => {
@@ -311,6 +327,16 @@ export function rideRoutes(router, { profile }) {
     })
   }
 
+  // Driver profile photo: a small JPEG the app resizes before upload (≤ 200 KB).
+  router.add('POST /api/driver/photo', async ({ ctx, body }) => {
+    const { user } = await eligibleDriver(ctx, profile)
+    const photo = String(body.photo ?? '')
+    if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(photo) || photo.length > 280_000) throw badRequest('INVALID_PHOTO', 'Photo must be a JPEG/PNG/WebP under 200 KB.', { field: 'photo' })
+    await db().driverProfile.update({ where: { userId: user.id }, data: { photo } })
+    await audit(db(), user.id, 'driver.photo', user.id, {})
+    return { ok: true }
+  })
+
   router.add('POST /api/driver/rides/:id/rate', async ({ ctx, params, body }) => {
     const { user } = await eligibleDriver(ctx, profile)
     const rating = stars(body.rating)
@@ -329,7 +355,7 @@ export function rideRoutes(router, { profile }) {
     const tipsCents = done.reduce((s, r) => s + (r.tipCents ?? 0), 0)
     const rated = done.filter((r) => r.riderRating != null)
     const rating = rated.length ? Math.round((rated.reduce((s, r) => s + r.riderRating, 0) / rated.length) * 10) / 10 : null
-    const status = { online: driver.online, lat: driver.lat, lng: driver.lng, category: driver.category, vehicle: driver.vehicle, acceptsPets: driver.acceptsPets, accessible: driver.accessible, rating, ratingCount: rated.length }
+    const status = { online: driver.online, lat: driver.lat, lng: driver.lng, category: driver.category, vehicle: driver.vehicle, acceptsPets: driver.acceptsPets, accessible: driver.accessible, rating, ratingCount: rated.length, hasPhoto: Boolean(driver.photo), photo: driver.photo }
     return { ok: true, rides: rides.map((r) => rideView(r, 'driver')), earningsCents, tipsCents, driver: status }
   })
 }
