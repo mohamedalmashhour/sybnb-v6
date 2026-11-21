@@ -71,7 +71,7 @@ export async function createStayCheckout({ booking, listing, user }) {
     locale: user.locale.startsWith('fr') ? 'fr-CA' : 'en',
     line_items: stayLineItems(booking.quote, listing.title, user.locale),
     metadata,
-    payment_intent_data: { metadata, description: `QTR stay ${booking.id}` },
+    payment_intent_data: { metadata, description: `Q STAY ${booking.id}` },
     expires_at: sessionExpiry(booking.holdExpiresAt),
     success_url: `${appUrl('qtr')}/?paid=${booking.id}`,
     cancel_url: `${appUrl('qtr')}/?unpaid=${booking.id}`,

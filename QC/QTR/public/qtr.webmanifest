@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "QTR Québec — Prototype",
-  "short_name": "QTR",
+  "name": "Q STAY Québec — Prototype",
+  "short_name": "Q STAY",
   "description": "Prototype de séjours au Québec. Aucune réservation ni paiement réel.",
   "lang": "fr-CA",
   "start_url": "./",

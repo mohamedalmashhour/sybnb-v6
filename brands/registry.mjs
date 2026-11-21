@@ -20,8 +20,9 @@ export const BRANDS = Object.freeze({
   },
   quebecbnb: {
     key: 'quebecbnb', name: 'QuebecBNB', nameAr: 'QuebecBNB', country: 'canada', status: 'DRAFT',
-    // Owner 2026-11-20: the Canada rides app is named "Q RIDE" (the name given to Revenu Québec).
-    appNames: { stay: 'QuebecBNB', rides: 'Q RIDE' },
+    // Owner 2026-11-20: the Canada apps are "Q STAY" (stays) and "Q RIDE" (rides; the name given to
+    // Revenu Québec).
+    appNames: { stay: 'Q STAY', rides: 'Q RIDE' },
     webDomain: 'quebecbnb.com', supportEmail: 'info@sybnb.app',
     colors: { primary: '#1f4e9c', accent: '#d7263d', light: '#ffffff' },
     logos: { platform: '/assets/logos/sybnb-platform.png', mark: '/assets/logos/sybnb-arch-monogram.png' },

@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "QRide Québec — Prototype",
-  "short_name": "QRide",
+  "name": "Q RIDE Québec — Prototype",
+  "short_name": "Q RIDE",
   "description": "Prototype de courses au Québec. Aucun service ni paiement réel.",
   "lang": "fr-CA",
   "start_url": "./",

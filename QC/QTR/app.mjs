@@ -51,7 +51,7 @@ async function render() {
 // ---------------- Guest: search ----------------
 async function search() {
   const s = state.search
-  $('main').innerHTML = `<div class="sectionhead"><span class="eyebrow">QTR · QUÉBEC</span><h1>${t('Un séjour.<br>Un accueil local.', 'A stay.<br>A local welcome.')}</h1>
+  $('main').innerHTML = `<div class="sectionhead"><span class="eyebrow">Q STAY · QUÉBEC</span><h1>${t('Un séjour.<br>Un accueil local.', 'A stay.<br>A local welcome.')}</h1>
     <p>${t('Des logements enregistrés et vérifiés avant publication, avec un prix total clair.', 'Registered places reviewed before publication, with a clear total price.')}</p></div>
     <div class="grid"><section class="card"><form class="form" id="stayForm">
       <label>${t('Ville', 'City')}<input id="city" value="${esc(s.city)}"></label>
