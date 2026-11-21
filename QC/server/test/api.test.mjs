@@ -199,6 +199,8 @@ test('ride: quote, request, single-winner dispatch, lifecycle and safety record'
   const offers = await api('GET', '/api/driver/offers', { token: driverA })
   assert.equal(offers.body.offers[0].id, rideId)
   assert.equal(offers.body.offers[0].breakdown.totalCents, undefined)
+  assert.equal(offers.body.offers[0].totalCents, undefined)
+  assert.equal(offers.body.offers[0].breakdown.taxes, undefined)
 
   const [a, bRes] = await Promise.all([driverA, driverB].map((token) => api('POST', `/api/driver/rides/${rideId}/accept`, { token })))
   assert.deepEqual([a.status, bRes.status].sort(), [200, 409])
@@ -239,6 +241,7 @@ test('ride: quote, request, single-winner dispatch, lifecycle and safety record'
   const earnings = await api('GET', '/api/driver/rides', { token: winner })
   assert.equal(earnings.body.earningsCents, b.driver.payoutCents + 300)
   assert.equal(earnings.body.tipsCents, 300)
+  assert.ok(earnings.body.rides.every((r) => r.totalCents === undefined && r.breakdown.lines === undefined))
   assert.equal(earnings.body.driver.online, true)
   assert.equal(earnings.body.driver.vehicle.plate.length, 6)
   await assert.rejects(db().rideEvent.deleteMany({ where: { rideId } }), /append-only/)

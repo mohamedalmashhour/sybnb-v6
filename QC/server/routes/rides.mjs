@@ -41,7 +41,8 @@ const rideView = (r, viewer) => ({
   // The rider sees the PIN and share link; the driver must ask the rider for the PIN.
   pickupPin: viewer === 'driver' ? undefined : r.pickupPin, shareToken: viewer === 'driver' ? undefined : r.shareToken,
   myRating: viewer === 'driver' ? r.driverRating : r.riderRating, ratedByOther: viewer === 'driver' ? r.riderRating != null : r.driverRating != null,
-  totalCents: r.totalCents, breakdown: viewer === 'driver' ? { driver: r.breakdown.driver, currency: 'CAD' } : r.breakdown,
+  // Drivers see only their own earnings, never what the rider pays (Uber/Lyft practice).
+  totalCents: viewer === 'driver' ? undefined : r.totalCents, breakdown: viewer === 'driver' ? { driver: r.breakdown.driver, currency: 'CAD' } : r.breakdown,
   createdAt: r.createdAt, acceptedAt: r.acceptedAt, completedAt: r.completedAt, cancelledBy: r.cancelledBy,
   driver: r.driver ? { name: r.driver.name, vehicle: r.driver.driver?.vehicle, category: r.driver.driver?.category, lat: r.driver.driver?.lat, lng: r.driver.driver?.lng, rating: r.driverRatingSummary, photo: viewer === 'driver' ? undefined : r.driver.driver?.photo } : null,
   rider: viewer === 'driver' && r.rider ? { name: r.rider.name } : undefined,
