@@ -15,7 +15,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>${SHARED_CSS}
 .live{display:flex;gap:12px;align-items:center}.dot{width:10px;height:10px;border-radius:50%;background:#3b9a62;animation:pulse 1.4s infinite}
 @keyframes pulse{50%{opacity:.3}}.events{list-style:none;padding:0;margin:12px 0 0}.events li{padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
 .plate{font-family:ui-monospace,monospace;background:#f4f5f9;border:1px solid var(--line);border-radius:6px;padding:2px 7px}
-.options{flex-wrap:wrap}.check{display:flex!important;flex-direction:row;align-items:center;gap:8px;font-weight:500;font-size:14px}.check input{width:auto}
+.options{flex-wrap:wrap}.opt{display:flex!important;flex-direction:row;align-items:center;gap:8px;font-weight:500;font-size:14px}.opt input{width:auto;margin:0}
 .pinBox{display:grid;gap:4px;background:#fff;border:2px solid var(--green);border-radius:16px;padding:14px 16px;margin-top:16px}.pinBox b{font-size:36px;letter-spacing:10px;font-family:ui-monospace,monospace}
 .sos{background:#c62828;color:#fff;border:0;border-radius:12px;padding:13px 18px;font-weight:800;letter-spacing:1px}
 .stars{display:flex;gap:6px;margin:6px 0 10px}.stars button{font-size:32px;background:none;border:0;color:#cfd5df;padding:0 2px}.stars button.on{color:#d4a91f}
@@ -127,8 +127,8 @@ async function ride() {
       <label>${t('Destination', 'Destination')}<input id="dropoff" list="places" required value="${esc(f.dropoff)}" placeholder="${t('Lieu, ou « lat, lng »', 'Place, or "lat, lng"')}"></label>
       <div class="row"><label>${t('Catégorie', 'Category')}<select id="category">${categoryOptions()}</select></label>
       <label>${t('Quand', 'When')}<select id="when"><option value="now">${t('Maintenant', 'Now')}</option><option value="schedule">${t('Planifier', 'Schedule')}</option></select></label></div>
-      <div class="row options"><label class="check"><input type="checkbox" id="optPet" ${f.pet ? 'checked' : ''}> ${t('Animal de compagnie', 'Pet')}${state.catalog?.options?.petFeeCents ? ` (+${cad(state.catalog.options.petFeeCents)})` : ''}</label>
-        <label class="check"><input type="checkbox" id="optAccessible" ${f.accessible ? 'checked' : ''}> ${t('Accessible en fauteuil roulant', 'Wheelchair accessible')}</label></div>
+      <div class="row options"><label class="opt"><input type="checkbox" id="optPet" ${f.pet ? 'checked' : ''}> ${t('Animal de compagnie', 'Pet')}${state.catalog?.options?.petFeeCents ? ` (+${cad(state.catalog.options.petFeeCents)})` : ''}</label>
+        <label class="opt"><input type="checkbox" id="optAccessible" ${f.accessible ? 'checked' : ''}> ${t('Accessible en fauteuil roulant', 'Wheelchair accessible')}</label></div>
       <div class="row" id="schedulePanel" hidden><label>${t('Date', 'Date')}<input id="sDate" type="date" min="${quebecDate()}" max="${quebecDate(30)}" value="${esc(f.date)}"></label><label>${t('Heure (Québec)', 'Time (Québec)')}<input id="sTime" type="time" value="${esc(f.time)}"></label></div>
       <p class="error" id="rideError" role="alert"></p>
       <button class="primary" id="quoteBtn">${t('Voir le prix', 'See price')}</button></form></section>
@@ -384,7 +384,7 @@ async function driver() {
       <div class="card"><h2>${t('Disponibilité', 'Availability')}</h2><form class="form" id="statusForm">
         <label>${t('Ma position', 'My position')}<input id="drvPos" list="places" value="${esc(state.driverPos)}" placeholder="${t('Lieu, ou « lat, lng »', 'Place, or "lat, lng"')}"></label>
         <div class="row"><button type="button" class="secondary" id="drvLocate">${t('Utiliser ma position', 'Use my location')}</button><button class="primary" id="goOnline">${t('Être en ligne', 'Go online')}</button><button type="button" class="secondary" id="goOffline">${t('Hors ligne', 'Go offline')}</button></div>
-        <div class="row options"><label class="check"><input type="checkbox" id="optPets" ${me.acceptsPets ? 'checked' : ''}> ${t('J’accepte les animaux', 'I accept pets')}</label><label class="check"><input type="checkbox" id="optAcc" ${me.accessible ? 'checked' : ''}> ${t('Véhicule accessible', 'Accessible vehicle')}</label></div>
+        <div class="row options"><label class="opt"><input type="checkbox" id="optPets" ${me.acceptsPets ? 'checked' : ''}> ${t('J’accepte les animaux', 'I accept pets')}</label><label class="opt"><input type="checkbox" id="optAcc" ${me.accessible ? 'checked' : ''}> ${t('Véhicule accessible', 'Accessible vehicle')}</label></div>
         <div class="photoRow">${me.photo ? `<img class="driverPhoto" src="${esc(me.photo)}" alt="">` : `<div class="driverPhoto initial">${esc((api.user.name || api.user.email || '?')[0].toUpperCase())}</div>`}
           <label class="secondary photoBtn">${me.photo ? t('Changer ma photo', 'Change my photo') : t('Ajouter ma photo (vue par les passagers)', 'Add my photo (shown to riders)')}<input type="file" id="drvPhoto" accept="image/*" hidden></label></div>
         <p class="small" id="drvStatus" role="status">${me.online ? `<span class="status">${t('En ligne', 'Online')}</span>` : `<span class="status status-cancelled">${t('Hors ligne', 'Offline')}</span>`} · ${esc(me.category)} · ${esc(me.vehicle?.make)} ${esc(me.vehicle?.model)} <span class="plate">${esc(me.vehicle?.plate)}</span>${me.rating ? ` · ★ ${me.rating} (${me.ratingCount})` : ''}</p></form></div>
