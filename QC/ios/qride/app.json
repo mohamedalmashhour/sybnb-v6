@@ -1,7 +1,7 @@
 { "expo": {
   "name": "Q RIDE", "slug": "qride", "scheme": "qride", "version": "1.0.0", "orientation": "portrait",
   "icon": "./assets/icon.png", "userInterfaceStyle": "light", "backgroundColor": "#13294b",
-  "splash": { "image": "./assets/splash.png", "resizeMode": "contain", "backgroundColor": "#13294b" },
+  "splash": { "image": "./assets/splash.png", "resizeMode": "contain", "backgroundColor": "#ffffff" },
   "assetBundlePatterns": ["**/*"],
   "ios": { "supportsTablet": false, "bundleIdentifier": "ca.qrides.app", "buildNumber": "1",
     "infoPlist": { "ITSAppUsesNonExemptEncryption": false ,"NSLocationWhenInUseUsageDescription":"Q RIDE utilise votre position pour le lieu de prise en charge et le suivi du trajet. / Q RIDE uses your location for pickup and trip tracking." } },
