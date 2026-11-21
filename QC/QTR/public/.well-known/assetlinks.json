@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "ca.qstay.app",
+    "sha256_cert_fingerprints": ["01:FC:2C:4E:D9:11:5E:78:FA:F0:3B:9D:89:D1:44:82:AF:CA:16:76:AF:D3:65:20:2D:D7:1B:5B:B5:62:D1:86"]
+  }
+}]
