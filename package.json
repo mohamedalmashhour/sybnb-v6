@@ -97,6 +97,7 @@
     "icons:rezekme": "python3 scripts/rezekme-icons.py",
     "qride:dev": "npm --prefix QC/QRide run dev",
     "qride:build": "npm --prefix QC/QRide run build",
+    "qeat:build": "npm --prefix QC/QEat run build",
     "qtr:dev": "npm --prefix QC/QTR run dev",
     "qtr:build": "npm --prefix QC/QTR run build",
     "qc:api": "node --env-file-if-exists=QC/server/.env QC/server/index.mjs",
