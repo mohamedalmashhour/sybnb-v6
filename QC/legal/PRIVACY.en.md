@@ -1,15 +1,14 @@
-# Privacy Policy — Q STAY and Q RIDE
+# Privacy Policy — Q STAY, Q RIDE and Q EAT
 
-> **DRAFT — NOT IN EFFECT.** Awaiting owner approval before publishing at qstay.ca/privacy and
-> qrides.ca/privacy. The French version prevails. **Changes in this version are in bold.**
+The French version prevails.
 
-**Company:** 9375-7649 Québec Inc. (NEQ 1173544397), operator of the Q STAY and Q RIDE apps
+**Company:** 9375-7649 Québec Inc. (NEQ 1173544397), operator of the Q STAY, Q RIDE and Q EAT apps
 (Portiqos platforms), 207-805 boul. Chomedey, Laval, Québec H7V 0B1.
-**Effective date:** **date of publication on qstay.ca and qrides.ca**
+**Effective date:** November 21, 2026 (updated: Q EAT added)
 
 ## 1. Person in charge of personal information
-Under Québec's Law 25, the person in charge is **Mohamed Almashhour**, President.
-Email: **privacy@qstay.ca**.
+Under Québec's Law 25, the person in charge is Mohamed Almashhour, President.
+Email: privacy@qstay.ca.
 
 ## 2. What we collect
 - **Account:** name, email, phone number, language. Sign-in with a code sent by email.
@@ -20,37 +19,53 @@ Email: **privacy@qstay.ca**.
   trip history, ratings and tips.
 - **Q RIDE drivers:** ID, driver's licence, vehicle (make, model, year, colour, plate), insurance,
   GST/QST numbers, location while on duty.
+- **Q EAT customers:** delivery address (or chosen location), dishes ordered, note to the
+  restaurant or courier, delivery or pickup, tip, order history, refunds and ratings.
+- **Q EAT restaurants:** business name and address, location, phone, MAPAQ permit number, NEQ,
+  GST/QST numbers, opening hours, menu and prices, listed allergens, payout details.
+- **Q EAT couriers:** couriers use their Q RIDE driver account (same information as "Q RIDE
+  drivers"); their location is used while online to offer nearby orders and show the customer
+  how the delivery is going.
 - **Trip recording ("black box"):** during a Q RIDE trip we record trip events (times, statuses,
-  GPS positions). **No audio or video is recorded.** A "This trip is recorded" notice is shown to
+  GPS positions). No audio or video is recorded. A "This trip is recorded" notice is shown to
   the rider and driver.
 - **Payments:** amount, taxes, transaction references. Card numbers are handled by our payment
-  provider; we do not store them. Payment provider: **Stripe**.
+  provider; we do not store them. Payment provider: Stripe.
 - **Technical data:** sign-in logs, device type, IP address, for security.
 
 ## 3. Why we use it
 To create and secure your account; show listings and calculate tax-included prices; match riders
-with drivers and track the trip; process payments, refunds and tips; collect and remit taxes
-(GST, QST, lodging tax, transport fee); verify hosts and drivers; keep users safe and handle
-complaints; meet our legal obligations (CTQ, Revenu Québec, Tourisme Québec).
+with drivers and track the trip; send your order to the restaurant, assign it to a courier and
+show you its progress; process payments, refunds and tips; collect and remit taxes (GST, QST,
+lodging tax, transport fee); verify hosts, drivers and restaurants; keep users safe and handle
+complaints; meet our legal obligations (CTQ, Revenu Québec, Tourisme Québec, MAPAQ).
 
 ## 4. Sharing
 We do not sell your information. We share it only:
 - between the parties to a booking or trip (first name, vehicle and plate, property address after
   booking);
-- with our service providers: hosting and database, email delivery, maps (Google Maps), payments: **Render (servers, United States), Neon (database, United States), Google (email and
-  Google Maps, United States), Stripe (payments, United States)**;
-- with authorities when the law requires it (e.g. Revenu Québec, the transport commission, police
-  with a legal request).
+- between the parties to a Q EAT order, only as needed: the restaurant sees your first name, the
+  dishes, your note and, for a delivery, only the address label; the courier sees your first name,
+  the delivery address and your note during the delivery. The restaurant and courier do not see
+  the total you pay; you do not see the restaurant's or courier's share;
+- with our service providers: hosting and database, email delivery, maps (Google Maps), payments:
+  Render (servers, United States), Neon (database, United States), Google (email and Google Maps,
+  United States), Stripe (payments, United States);
+- with authorities when the law requires it (e.g. Revenu Québec, the transport commission, MAPAQ,
+  police with a legal request).
 
 ## 5. Transfers outside Québec
-**Our providers (Render, Neon, Google, Stripe) store data in the United States.** Before any transfer we
-assess the protection offered, as Law 25 requires.
+Our providers (Render, Neon, Google, Stripe) store data in the United States. Before any transfer
+we assess the protection offered, as Law 25 requires.
 
 ## 6. How long we keep it
-- Trip recording: **7 days** after the trip ends, unless an incident, emergency (SOS) or complaint
+- Trip recording: 7 days after the trip ends, unless an incident, emergency (SOS) or complaint
   is reported within that time (kept until resolved).
-- Bookings, trips, receipts and tax records: **6 years** (tax obligations).
-- Driver and host documents: while the account is active, then **3 years after the account is closed**.
+- Bookings, trips, orders, receipts and tax records: 6 years (tax obligations).
+- Q EAT delivery address and note: kept with the order; no longer shown to the restaurant or
+  courier once the order is delivered or cancelled.
+- Driver, host and restaurant documents: while the account is active, then 3 years after the
+  account is closed.
 - Closed accounts: deleted or anonymized, except what the law requires us to keep.
 
 ## 7. Your rights
@@ -70,4 +85,4 @@ The services are for people 18 and over.
 We will notify you in the app of any important change to this policy.
 
 ## Contact
-Privacy: privacy@qstay.ca · Q STAY: support@qstay.ca · Q RIDE: support@qrides.ca
+Privacy: privacy@qstay.ca · Q STAY: support@qstay.ca · Q RIDE: support@qrides.ca · Q EAT: support@qeat.ca
