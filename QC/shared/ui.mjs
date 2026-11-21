@@ -26,7 +26,16 @@ export function quebecDate(addDays = 0) {
   return d.toISOString().slice(0, 10)
 }
 
-export const errorText = (err) => (err?.code === 'NETWORK'
+// French versions of server error codes users can hit; the server message is used otherwise.
+const ERRORS_FR = {
+  WRONG_PIN: 'Code incorrect. Demandez au passager le code à 4 chiffres affiché dans son application.',
+  CANNOT_RATE: 'Ce trajet ne peut plus être noté.', CANNOT_TIP: 'Ce trajet ne peut plus recevoir de pourboire.',
+  INVALID_RATING: 'Choisissez de 1 à 5 étoiles.', TIPS_NOT_AVAILABLE_YET: 'Le pourboire par carte n’est pas encore disponible.',
+  NOT_ACTIVE: 'Disponible seulement pendant un trajet.', OPTION_UNAVAILABLE: 'Cette option n’est pas offerte.',
+  QUOTE_EXPIRED: 'Ce prix a expiré. Demandez un nouveau prix.', RIDE_IN_PROGRESS: 'Vous avez déjà une course en cours.',
+  RIDE_TAKEN: 'Cette course n’est plus disponible.', INVALID_CODE: 'Ce code est invalide ou expiré.',
+}
+export const errorText = (err) => (i18n.lang === 'fr' && ERRORS_FR[err?.code]) ? ERRORS_FR[err.code] : (err?.code === 'NETWORK'
   ? t('Service momentanément indisponible. Vérifiez votre connexion et réessayez.', 'Service temporarily unavailable. Check your connection and try again.')
   : err?.message || t('Une erreur est survenue.', 'Something went wrong.'))
 

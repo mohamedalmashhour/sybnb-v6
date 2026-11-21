@@ -78,6 +78,10 @@ export const profile = Object.freeze({
     // Ride options (Uber/Lyft-style). Pet: flat fee added to the fare (taxed like the fare, paid to the
     // driver), only drivers who accept pets are offered. Accessible: wheelchair-accessible vehicle.
     options: { petFeeCents: 500, accessible: true, maxTipCents: 10000 },
+    // Québec per-trip levy on remunerated passenger transport, collected by the operator for remittance
+    // (not platform or driver revenue). ⚠️ Amount and tax treatment to confirm with the accountant /
+    // Revenu Québec before launch; set to 0 to turn off.
+    regulatoryFee: { cents: 90, taxable: false, label: { fr: 'Redevance du Québec', en: 'Québec levy' } },
     bookingFeeCents: 250,
     driverCommissionBp: 2500,
     // Average urban speed used to estimate duration until a routing provider is connected.

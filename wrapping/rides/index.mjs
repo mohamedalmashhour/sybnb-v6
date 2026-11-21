@@ -51,7 +51,10 @@ export function surgeBp({ openRequests, onlineDrivers, profile }) {
 }
 
 // Server-authoritative fare quote for one category.
-export function quoteRide({ pickup, dropoff, stops = [], category, profile, surge = 10_000, route }) {
+// options: { pet } adds the country's pet fee (taxed like the fare, paid in full to the driver).
+// A country may set rides.regulatoryFee { minor, taxable } — a per-trip government levy collected for
+// remittance (not platform or driver revenue). Both are country settings, never hard-coded here.
+export function quoteRide({ pickup, dropoff, stops = [], category, profile, surge = 10_000, route, options = {} }) {
   const { rides, taxes = {}, currencies } = profile
   const c = rides.categories[category]
   if (!c) throw new Error(`ride category '${category}' is not offered in this country`)
@@ -61,10 +64,13 @@ export function quoteRide({ pickup, dropoff, stops = [], category, profile, surg
   const fare = pct(Math.max(metered, c.minimumMinor), s)
   const stopsFee = stops.length * (rides.perStopMinor ?? 0)
   const booking = rides.bookingFeeMinor ?? 0
-  const tax = taxLines(fare + stopsFee + booking, rides.taxes ?? [], taxes)
+  const petFee = options.pet ? (rides.options?.petFeeMinor ?? 0) : 0
+  const levy = rides.regulatoryFee?.minor ?? 0
+  const levyTaxable = Boolean(rides.regulatoryFee?.taxable)
+  const tax = taxLines(fare + stopsFee + booking + petFee + (levyTaxable ? levy : 0), rides.taxes ?? [], taxes)
   const taxMinor = sum(tax)
   const commission = pct(fare + stopsFee, rides.driverCommissionBp ?? 0)
-  const total = fare + stopsFee + booking + taxMinor
+  const total = fare + stopsFee + booking + petFee + levy + taxMinor
   return {
     currency: currencies.default,
     category,
@@ -75,12 +81,15 @@ export function quoteRide({ pickup, dropoff, stops = [], category, profile, surg
       { code: 'FARE', minor: fare, surgeBp: s, minimumApplied: metered < c.minimumMinor },
       ...(stopsFee ? [{ code: 'STOPS', minor: stopsFee, stops: stops.length }] : []),
       { code: 'BOOKING_FEE', minor: booking },
+      ...(petFee ? [{ code: 'PET_FEE', minor: petFee }] : []),
+      ...(levy ? [{ code: 'REGULATORY_FEE', minor: levy, taxable: levyTaxable }] : []),
     ],
     taxes: tax,
     taxStatus: taxes.status ?? 'NONE',
     taxMinor,
     totalMinor: total,
-    driver: { grossMinor: fare + stopsFee, commissionMinor: commission, payoutMinor: fare + stopsFee - commission },
+    driver: { grossMinor: fare + stopsFee + petFee, commissionMinor: commission, payoutMinor: fare + stopsFee + petFee - commission },
+    governmentMinor: levy,
   }
 }
 

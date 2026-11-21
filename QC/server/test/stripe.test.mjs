@@ -199,7 +199,8 @@ test('ride: unpaid ride is hidden from drivers; authorization releases it; compl
   assert.equal(offers[0].id, r.body.ride.id)
 
   await api('POST', `/api/driver/rides/${r.body.ride.id}/accept`, { token: driver })
-  for (const step of ['arrive', 'start', 'complete']) await api('POST', `/api/driver/rides/${r.body.ride.id}/${step}`, { token: driver })
+  const pin = (await api('GET', `/api/rides/${r.body.ride.id}`, { token: guest })).body.ride.pickupPin
+  for (const step of ['arrive', 'start', 'complete']) await api('POST', `/api/driver/rides/${r.body.ride.id}/${step}`, { token: driver, body: step === 'start' ? { pin } : undefined })
   const [, pi, cap, opts] = calls.findLast((c) => c[0] === 'capture')
   assert.deepEqual([pi, cap.amount_to_capture, opts.idempotencyKey], ['pi_ride_1', r.body.ride.totalCents, `ride-capture-${r.body.ride.id}`])
   const payment = await db().payment.findUnique({ where: { rideId: r.body.ride.id } })

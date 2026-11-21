@@ -38,6 +38,8 @@ export function toCapsuleProfile(base) {
   rides: {
     categories: Object.fromEntries(Object.entries(base.rides.categories).map(([k, c]) => [k, cat(c)])),
     bookingFeeMinor: base.rides.bookingFeeCents,
+    options: { petFeeMinor: base.rides.options?.petFeeCents ?? 0, accessible: Boolean(base.rides.options?.accessible), maxTipMinor: base.rides.options?.maxTipCents ?? 0 },
+    regulatoryFee: base.rides.regulatoryFee ? { minor: base.rides.regulatoryFee.cents, taxable: base.rides.regulatoryFee.taxable } : undefined,
     perStopMinor: 0,
     maxStops: 0,
     driverCommissionBp: base.rides.driverCommissionBp,

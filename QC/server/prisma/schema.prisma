@@ -59,6 +59,8 @@ enum RideCategory {
   STANDARD
   COMFORT
   XL
+  PREMIUM
+  GREEN
 
   @@map("qc_ride_category")
 }
@@ -145,6 +147,8 @@ model DriverProfile {
   licenceExpiry   DateTime     @map("licence_expiry") @db.Date
   insuranceExpiry DateTime     @map("insurance_expiry") @db.Date
   online          Boolean      @default(false)
+  acceptsPets     Boolean      @default(false) @map("accepts_pets")
+  accessible      Boolean      @default(false)
   lat             Float?
   lng             Float?
   lastSeenAt      DateTime?    @map("last_seen_at")
@@ -252,6 +256,15 @@ model Ride {
   totalCents   Int          @map("total_cents")
   breakdown    Json
   cancelledBy  String?      @map("cancelled_by")
+  pet          Boolean      @default(false)
+  accessible   Boolean      @default(false)
+  // 4-digit code the rider tells the driver before boarding; shown only to the rider.
+  pickupPin    String?      @map("pickup_pin")
+  shareToken   String?      @unique @map("share_token")
+  riderRating  Int?         @map("rider_rating")     // rider -> driver, 1..5
+  riderComment String?      @map("rider_comment")
+  driverRating Int?         @map("driver_rating")    // driver -> rider, 1..5
+  tipCents     Int          @default(0) @map("tip_cents")
   createdAt    DateTime     @default(now()) @map("created_at")
   acceptedAt   DateTime?    @map("accepted_at")
   completedAt  DateTime?    @map("completed_at")

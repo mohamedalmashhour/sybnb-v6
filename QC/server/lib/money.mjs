@@ -39,10 +39,12 @@ export function stayQuote({ listing, nights, profile }) {
   }
 }
 
-export function rideQuote({ pickup, dropoff, category, profile, surgeBp = 10_000 }) {
-  const q = quoteRide({ pickup, dropoff, category, profile: capsuleFor(profile), surge: surgeBp })
+export function rideQuote({ pickup, dropoff, category, profile, surgeBp = 10_000, options = {} }) {
+  const q = quoteRide({ pickup, dropoff, category, profile: capsuleFor(profile), surge: surgeBp, options: { pet: Boolean(options.pet) } })
   const fare = q.lines.find((l) => l.code === 'FARE')
   const booking = q.lines.find((l) => l.code === 'BOOKING_FEE')
+  const pet = q.lines.find((l) => l.code === 'PET_FEE')
+  const levy = q.lines.find((l) => l.code === 'REGULATORY_FEE')
   return {
     distanceM: q.distanceM,
     durationS: q.durationS,
@@ -52,7 +54,11 @@ export function rideQuote({ pickup, dropoff, category, profile, surgeBp = 10_000
       lines: [
         { code: 'FARE', cents: fare.minor, surgeBp: fare.surgeBp, minimumApplied: fare.minimumApplied },
         { code: 'BOOKING_FEE', cents: booking.minor },
+        ...(pet ? [{ code: 'PET_FEE', cents: pet.minor }] : []),
+        ...(levy ? [{ code: 'REGULATORY_FEE', cents: levy.minor, taxable: levy.taxable }] : []),
       ],
+      options: { pet: Boolean(options.pet), accessible: Boolean(options.accessible) },
+      governmentCents: q.governmentMinor ?? 0,
       taxes: q.taxes.map(taxToCents),
       taxStatus: q.taxStatus,
       taxCents: q.taxMinor,
