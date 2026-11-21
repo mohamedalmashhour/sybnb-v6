@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "ca.qrides.app",
+    "sha256_cert_fingerprints": ["D4:3B:2F:B5:ED:83:06:40:54:69:E7:6A:62:FD:49:1F:32:08:94:45:4F:CA:01:50:49:C7:56:D2:2B:75:03:72"]
+  }
+}]
