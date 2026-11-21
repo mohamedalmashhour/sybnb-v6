@@ -210,7 +210,7 @@ export async function renderApplicationsReview(container, api, role, onChange) {
 export const SHARED_CSS = `
 [hidden]{display:none!important}
 .account{display:flex;gap:8px;align-items:center}
-textarea{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:11px;background:#fbfcf9;color:var(--ink);font:inherit}
+textarea{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:11px;background:#ffffff;color:var(--ink);font:inherit}
 .map{min-height:240px}
 .error{color:#a3322a;font-size:13px;margin:0;min-height:0}
 .error:empty{display:none}
@@ -221,7 +221,7 @@ button:disabled{opacity:.55;cursor:progress}
 .reviewItem .actions{display:flex;gap:8px;flex:none}
 .reviewItem .actions button{padding:9px 13px}
 .listing{display:grid;grid-template-columns:150px 1fr;gap:16px;border-bottom:1px solid var(--line);padding:16px 0;cursor:pointer;text-align:left;background:none;border-width:0 0 1px;width:100%;color:inherit}
-.listing img,.photo{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px;background:#e4e5d9}
+.listing img,.photo{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px;background:#e9edf4}
 .listing h3{margin:0 0 6px}
 .lines .fare{padding:9px 0;font-size:14px}
 .lines .total{font-weight:750;font-size:17px;border-bottom:0}

@@ -14,14 +14,14 @@ const ACTIVE = ['PAYMENT_PENDING', 'REQUESTED', 'ACCEPTED', 'ARRIVED', 'IN_PROGR
 document.head.insertAdjacentHTML('beforeend', `<style>${SHARED_CSS}
 .live{display:flex;gap:12px;align-items:center}.dot{width:10px;height:10px;border-radius:50%;background:#3b9a62;animation:pulse 1.4s infinite}
 @keyframes pulse{50%{opacity:.3}}.events{list-style:none;padding:0;margin:12px 0 0}.events li{padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
-.plate{font-family:ui-monospace,monospace;background:#f4f6ef;border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+.plate{font-family:ui-monospace,monospace;background:#f4f5f9;border:1px solid var(--line);border-radius:6px;padding:2px 7px}
 .options{flex-wrap:wrap}.check{display:flex!important;flex-direction:row;align-items:center;gap:8px;font-weight:500;font-size:14px}.check input{width:auto}
 .pinBox{display:grid;gap:4px;background:#fff;border:2px solid var(--green);border-radius:16px;padding:14px 16px;margin-top:16px}.pinBox b{font-size:36px;letter-spacing:10px;font-family:ui-monospace,monospace}
 .sos{background:#c62828;color:#fff;border:0;border-radius:12px;padding:13px 18px;font-weight:800;letter-spacing:1px}
-.stars{display:flex;gap:6px;margin:6px 0 10px}.stars button{font-size:32px;background:none;border:0;color:#cfd5df;padding:0 2px}.stars button.on{color:#f5a623}
-.starmini{background:none;border:0;color:#f5a623;font-size:16px;padding:0 1px}
+.stars{display:flex;gap:6px;margin:6px 0 10px}.stars button{font-size:32px;background:none;border:0;color:#cfd5df;padding:0 2px}.stars button.on{color:#d4a91f}
+.starmini{background:none;border:0;color:#d4a91f;font-size:16px;padding:0 1px}
 .liveMap{min-height:300px;border-radius:18px;overflow:hidden;margin-top:16px}
-.qbadge{background:#fff;border-radius:20px;padding:7px 12px;font:600 13px system-ui;box-shadow:0 1px 6px rgba(0,0,0,.2);color:#13294b}
+.qbadge{background:#fff;border-radius:20px;padding:7px 12px;font:600 13px system-ui;box-shadow:0 1px 6px rgba(0,0,0,.2);color:#0b1f45}
 .qcar,.qpin{background:none;border:0}
 .driverPanel{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin-top:14px}
 .driverPhoto{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none}.driverPhoto.initial{display:grid;place-items:center;background:var(--lime);font-weight:800;font-size:22px}

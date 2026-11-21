@@ -12,8 +12,8 @@ const carIcon = (mine) => L.divIcon({
   className: 'qcar',
   iconSize: [34, 34],
   iconAnchor: [17, 17],
-  html: `<svg viewBox="0 0 34 34" width="34" height="34" aria-hidden="true"><circle cx="17" cy="17" r="16" fill="${mine ? '#13294b' : '#fff'}" stroke="#13294b" stroke-width="2"/>
-    <path d="M10 19.5l1.6-4.6A2 2 0 0 1 13.5 13.5h7a2 2 0 0 1 1.9 1.4l1.6 4.6v3a1 1 0 0 1-1 1h-1.2a1 1 0 0 1-1-1v-.8h-7.6v.8a1 1 0 0 1-1 1H11a1 1 0 0 1-1-1z" fill="${mine ? '#ffd166' : '#13294b'}"/></svg>`,
+  html: `<svg viewBox="0 0 34 34" width="34" height="34" aria-hidden="true"><circle cx="17" cy="17" r="16" fill="${mine ? '#0b1f45' : '#fff'}" stroke="#0b1f45" stroke-width="2"/>
+    <path d="M10 19.5l1.6-4.6A2 2 0 0 1 13.5 13.5h7a2 2 0 0 1 1.9 1.4l1.6 4.6v3a1 1 0 0 1-1 1h-1.2a1 1 0 0 1-1-1v-.8h-7.6v.8a1 1 0 0 1-1 1H11a1 1 0 0 1-1-1z" fill="${mine ? '#d4a91f' : '#0b1f45'}"/></svg>`,
 })
 const pinIcon = (label, color) => L.divIcon({
   className: 'qpin', iconSize: [28, 28], iconAnchor: [14, 14],
@@ -80,7 +80,7 @@ function drawRide(ride) {
   layer.clearLayers()
   const pts = []
   const a = [ride.pickup.lat, ride.pickup.lng]; L.marker(a, { icon: pinIcon('A', '#2e7d32') }).addTo(layer); pts.push(a)
-  const b = [ride.dropoff.lat, ride.dropoff.lng]; L.marker(b, { icon: pinIcon('B', '#13294b') }).addTo(layer); pts.push(b)
+  const b = [ride.dropoff.lat, ride.dropoff.lng]; L.marker(b, { icon: pinIcon('B', '#0b1f45') }).addTo(layer); pts.push(b)
   const d = ride.driver
   if (d?.lat != null && ['ACCEPTED', 'ARRIVED', 'IN_PROGRESS'].includes(ride.status)) {
     const c = [d.lat, d.lng]; L.marker(c, { icon: carIcon(true) }).addTo(layer); pts.push(c)

@@ -1,6 +1,6 @@
 { "expo": {
   "name": "Q RIDE", "slug": "qride", "scheme": "qride", "version": "1.0.0", "orientation": "portrait",
-  "icon": "./assets/icon.png", "userInterfaceStyle": "light", "backgroundColor": "#13294b",
+  "icon": "./assets/icon.png", "userInterfaceStyle": "light", "backgroundColor": "#0b1f45",
   "splash": { "image": "./assets/splash.png", "resizeMode": "contain", "backgroundColor": "#ffffff" },
   "assetBundlePatterns": ["**/*"],
   "ios": { "supportsTablet": false, "bundleIdentifier": "ca.qrides.app", "buildNumber": "1",
