@@ -16,3 +16,13 @@ export async function getDriverRatingSummary(driverId) {
     ratingCount: result._count,
   }
 }
+
+// Driver -> rider ratings (owner 2026-11-20): the rider's average, shown to drivers.
+export async function getRiderRatingSummary(riderId) {
+  if (!riderId) return { averageRating: null, ratingCount: 0 }
+  const result = await db().riderReview.aggregate({ where: { hiddenAt: null, riderId }, _avg: { rating: true }, _count: true })
+  return {
+    averageRating: result._avg.rating !== null ? Math.round(result._avg.rating * 10) / 10 : null,
+    ratingCount: result._count,
+  }
+}

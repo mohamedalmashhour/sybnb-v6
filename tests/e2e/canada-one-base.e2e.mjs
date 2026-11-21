@@ -139,6 +139,22 @@ async function main() {
   const driverCredit = await db().walletEntry.findFirst({ where: { referenceType: 'ride_fare', referenceId: ride?.id } })
   check('driver paid from the fare only (no taxes, no dues)', driverCredit && driverCredit.amountMinor < fresh.fareMinor, { credit: driverCredit?.amountMinor, fare: fresh?.fareMinor })
 
+  console.log('\n=== 6a. END OF TRIP: RATINGS BOTH WAYS + TIP ===')
+  const rr = await call('POST', `/api/sr/rides/${ride?.id}/review`, guest.token, { rating: 5, comment: 'Great driver' })
+  check('rider rates the driver', rr.status === 201, rr)
+  const dr = await call('POST', `/api/sr/rides/${ride?.id}/rate-rider`, driver.token, { rating: 4, comment: 'On time' })
+  check('driver rates the rider', dr.status === 201 && dr.j?.review?.rating === 4, dr)
+  const dr2 = await call('POST', `/api/sr/rides/${ride?.id}/rate-rider`, driver.token, { rating: 5 })
+  check('driver can rate the rider only once', code(dr2) === 'REVIEW_ALREADY_EXISTS', dr2)
+  const view = await call('GET', `/api/sr/rides/${ride?.id}`, driver.token)
+  check('driver sees the rider rating', view.j?.ride?.riderRating?.averageRating === 4 && view.j?.ride?.driverRatedRider === true, view.j?.ride?.riderRating)
+  // Payments stay closed for Canada (§5), so a tip is refused by the payment policy until the owner
+  // opens them; the tip money flow itself is covered by ride-end-of-trip.e2e.mjs.
+  const tip = await call('POST', `/api/sr/rides/${ride?.id}/tip`, guest.token, { amountMinor: 300 })
+  check('tip refused while Canada payments are closed (fail-closed)', code(tip) === 'PAYMENT_POLICY_DENIED', tip)
+  const bigTip = await call('POST', `/api/sr/rides/${ride?.id}/tip`, guest.token, { amountMinor: 20000 })
+  check('tip above the Canada limit ($100) is refused first', code(bigTip) === 'TIP_AMOUNT_INVALID', bigTip)
+
   console.log('\n=== 6b. LATE CANCELLATION: FEE + GST/QST ON THE FEE (no dues) ===')
   const req2 = await call('POST', '/api/sr/rides', guest.token, { pickup: 'Montréal centre-ville', dropoff: 'Laval', category: 'SR Economy', pickupCoords: { lat: 45.5017, lng: -73.5673 }, dropoffCoords: { lat: 45.6066, lng: -73.7124 } })
   const ride2 = req2.j?.ride || req2.j

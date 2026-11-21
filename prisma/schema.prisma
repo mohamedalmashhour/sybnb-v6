@@ -3496,3 +3496,32 @@ model RideTaxRecord {
   @@index([riderId, issuedAt], map: "ride_tax_records_rider_idx")
   @@map("ride_tax_records")
 }
+
+// Driver -> rider rating (owner 2026-11-20), one per completed ride (migration 089).
+model RiderReview {
+  id        String    @id @default(uuid()) @db.Uuid
+  rideId    String    @unique(map: "rider_reviews_ride_key") @map("ride_id") @db.Uuid
+  driverId  String    @map("driver_id") @db.Uuid
+  riderId   String    @map("rider_id") @db.Uuid
+  rating    Int
+  comment   String?
+  hiddenAt  DateTime? @map("hidden_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([riderId, hiddenAt], map: "rider_reviews_rider_idx")
+  @@map("rider_reviews")
+}
+
+// Rider -> driver tip after a completed ride (owner 2026-11-20), once per ride, 100% to the driver.
+model RideTip {
+  id          String   @id @default(uuid()) @db.Uuid
+  rideId      String   @unique(map: "ride_tips_ride_key") @map("ride_id") @db.Uuid
+  riderId     String   @map("rider_id") @db.Uuid
+  driverId    String   @map("driver_id") @db.Uuid
+  amountMinor Int      @map("amount_minor")
+  currency    String
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([driverId, createdAt], map: "ride_tips_driver_idx")
+  @@map("ride_tips")
+}

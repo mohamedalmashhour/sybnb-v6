@@ -23,7 +23,7 @@ export const CLASS_PROFILES = {
   'SR VIP': { fuelL100: 9.5, carPriceUsd: 70000, maintenanceUsdPerKm: 0.12, pickupKm: 2, baseExtraUsd: 3, minFareUsd: dollars(r.categories.PREMIUM.minimumCents) },
 }
 // Ride options offered in this country (pet fee in cents, accessible vehicles).
-export const RIDE_OPTIONS = { petFeeMinor: r.options.petFeeCents, accessible: r.options.accessible === true }
+export const RIDE_OPTIONS = { petFeeMinor: r.options.petFeeCents, accessible: r.options.accessible === true, maxTipMinor: r.options.maxTipCents }
 // Rider-facing names and descriptions for each category key, from the country profile.
 export const CATEGORY_NAMES = Object.fromEntries(Object.entries(MAP).map(([cat, key]) => [cat, { name: r.categories[key].name, blurb: r.categories[key].blurb, seats: r.categories[key].seats }]))
 export const DEFAULT_COSTS = {

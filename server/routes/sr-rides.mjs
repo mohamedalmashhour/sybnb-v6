@@ -11,7 +11,7 @@ import { quoteSrRideForActiveCountry, ridePricingForActiveCountry } from '../lib
 import { refreshSrPricing, readStoredPricing, invalidateSrPricingCache, pricingKey, PRICING_CATEGORY } from '../lib/sr-pricing-store.mjs'
 import { resolveTrafficDistance } from '../lib/traffic-distance.mjs'
 import { signDriverPhotoUrl } from '../lib/driver-photo-storage.mjs'
-import { getDriverRatingSummary } from '../lib/driver-rating.mjs'
+import { getDriverRatingSummary, getRiderRatingSummary } from '../lib/driver-rating.mjs'
 import { getDriverLocation, getRideCoords, etaMinutesBetween, haversineKm } from '../lib/live-map.mjs'
 import { capsuleProfile } from '../lib/capsule-profile.mjs'
 import { governmentCharges } from '../../wrapping/rides/smart-fare.mjs'
@@ -1174,6 +1174,16 @@ export async function handleSrRides(req, res, url, context) {
     }
     // Pickup wait countdown for both apps (null until the driver taps "I've arrived").
     ridePayload.wait = waitState(ride.metadata)
+    // End of trip (owner 2026-11-20): the driver sees the rider's rating; each side sees whether it
+    // already rated / tipped, so the app shows the right end-of-trip screen.
+    if (ride.driverId === context.user.id) {
+      ridePayload.riderRating = await getRiderRatingSummary(ride.riderId)
+      ridePayload.driverRatedRider = Boolean(await db().riderReview.findUnique({ where: { rideId: ride.id }, select: { id: true } }))
+    }
+    if (ride.riderId === context.user.id || ride.driverId === context.user.id) {
+      const tip = await db().rideTip.findUnique({ where: { rideId: ride.id }, select: { amountMinor: true, currency: true } })
+      ridePayload.tip = tip || null
+    }
     return json(res, 200, { ok: true, ride: ridePayload })
   }
 
@@ -1998,6 +2008,67 @@ export async function handleSrRides(req, res, url, context) {
     })
 
     return json(res, 201, { ok: true, review })
+  }
+
+  // End of trip, driver side (owner 2026-11-20): the driver rates the rider 1..5 once per completed
+  // ride, within 7 days. Riders' averages are shown to drivers (GET ride, riderRating).
+  const rateRiderMatch = url.pathname.match(/^\/api\/sr\/rides\/([^/]+)\/rate-rider$/)
+  if (rateRiderMatch) {
+    if (req.method !== 'POST') return methodNotAllowed(res, ['POST'])
+    requireAuth(context, ['DRIVER'])
+    const fail = (status, code, message) => { const error = new Error(message); error.statusCode = status; error.code = code; error.expose = true; return error }
+    const body = await readJson(req)
+    const rating = Number(body.rating)
+    const comment = typeof body.comment === 'string' ? body.comment.trim().slice(0, 2000) || null : null
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw fail(400, 'REVIEW_RATING_INVALID', 'rating must be an integer from 1 to 5.')
+    const ride = await db().rideRequest.findFirst({ where: { id: rateRiderMatch[1], driverId: context.user.id } })
+    if (!ride) throw fail(404, 'RIDE_NOT_FOUND', 'Ride not found for this driver account.')
+    if (ride.status !== 'COMPLETED') throw fail(400, 'REVIEW_RIDE_NOT_COMPLETED', 'Only completed rides can be rated.')
+    if (Date.now() - new Date(ride.updatedAt).getTime() > 7 * 864e5) throw fail(400, 'REVIEW_WINDOW_CLOSED', 'Ratings are accepted for 7 days after the ride.')
+    try {
+      const review = await db().riderReview.create({ data: { rideId: ride.id, driverId: context.user.id, riderId: ride.riderId, rating, comment } })
+      return json(res, 201, { ok: true, review })
+    } catch (err) {
+      if (err?.code === 'P2002') throw fail(409, 'REVIEW_ALREADY_EXISTS', 'You already rated this rider.')
+      throw err
+    }
+  }
+
+  // End of trip, rider side (owner 2026-11-20): an optional tip after a completed ride, once per ride,
+  // within 30 days. Paid from the rider's wallet balance (funds already in platform custody, like
+  // paying a stay from the wallet); 100% goes to the driver — no commission, and no GST/QST (a
+  // voluntary tip is not a taxable supply). Limit: rides.options.maxTipMinor, else twice the fare.
+  const tipMatch = url.pathname.match(/^\/api\/sr\/rides\/([^/]+)\/tip$/)
+  if (tipMatch) {
+    if (req.method !== 'POST') return methodNotAllowed(res, ['POST'])
+    requireAuth(context, ['GUEST'])
+    const fail = (status, code, message) => { const error = new Error(message); error.statusCode = status; error.code = code; error.expose = true; return error }
+    const body = await readJson(req)
+    const amountMinor = Number(body.amountMinor)
+    const ride = await db().rideRequest.findFirst({ where: { id: tipMatch[1], riderId: context.user.id } })
+    if (!ride) throw fail(404, 'RIDE_NOT_FOUND', 'Ride not found for this rider account.')
+    if (ride.status !== 'COMPLETED' || !ride.driverId) throw fail(400, 'TIP_RIDE_NOT_COMPLETED', 'You can tip once the ride is completed.')
+    if (Date.now() - new Date(ride.updatedAt).getTime() > 30 * 864e5) throw fail(400, 'TIP_WINDOW_CLOSED', 'Tips are accepted for 30 days after the ride.')
+    const maxTip = P().RIDE_OPTIONS?.maxTipMinor || Math.max(1, (ride.fareMinor || 0) * 2)
+    if (!Number.isInteger(amountMinor) || amountMinor < 1 || amountMinor > maxTip) throw fail(400, 'TIP_AMOUNT_INVALID', `Tip must be a whole amount between 1 and ${maxTip}.`)
+    authorizePaymentOperation({
+      operation: 'create', rail: 'manual_proof', provider: 'manual', division: 'SR',
+      country: activePolicyCountryKey(), environment: policyEnvironment(), actor: { roles: context.roles },
+    })
+    try {
+      const tip = await db().$transaction(async (tx) => {
+        await reauthorizeAtCommit(tx, context, { action: 'RIDE_TIP', requiredRoles: ['GUEST'] })
+        const created = await tx.rideTip.create({ data: { rideId: ride.id, riderId: ride.riderId, driverId: ride.driverId, amountMinor, currency: ride.currency } })
+        await recordWalletEntry(tx, { userId: ride.riderId, type: 'DEBIT', amountMinor, currency: ride.currency, referenceType: 'ride_tip', referenceId: ride.id, keyParts: ['ride-tip-rider', ride.id], note: 'Tip to the driver after the ride.' })
+        await recordWalletEntry(tx, { userId: ride.driverId, type: 'CREDIT', amountMinor, currency: ride.currency, referenceType: 'ride_tip', referenceId: ride.id, keyParts: ['ride-tip-driver', ride.id], note: 'Tip from the rider (100% to the driver).' })
+        return created
+      })
+      return json(res, 201, { ok: true, tip })
+    } catch (err) {
+      if (err?.code === 'P2002') throw fail(409, 'TIP_ALREADY_GIVEN', 'You already tipped for this ride.')
+      if (err?.code === 'WALLET_INSUFFICIENT_FUNDS') throw fail(402, 'WALLET_INSUFFICIENT_FUNDS', 'Your wallet balance is not enough for this tip. Top up first.')
+      throw err
+    }
   }
 
   // SR Ride vs. Uber gap-closure (P0 #3): trip-sharing with a trusted contact. Mints a signed,

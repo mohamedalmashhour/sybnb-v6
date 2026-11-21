@@ -77,7 +77,7 @@ export const profile = Object.freeze({
     },
     // Ride options (Uber/Lyft-style). Pet: flat fee added to the fare (taxed like the fare, paid to the
     // driver), only drivers who accept pets are offered. Accessible: wheelchair-accessible vehicle.
-    options: { petFeeCents: 500, accessible: true },
+    options: { petFeeCents: 500, accessible: true, maxTipCents: 10000 },
     bookingFeeCents: 250,
     driverCommissionBp: 2500,
     // Average urban speed used to estimate duration until a routing provider is connected.
