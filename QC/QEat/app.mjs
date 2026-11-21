@@ -24,6 +24,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>${SHARED_CSS}
 .kan{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.kan section{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;min-height:120px}
 .ord{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px;background:var(--paper)}.ord .row{flex-wrap:wrap}
 .tips{display:flex;gap:8px;flex-wrap:wrap}.big{font-size:28px;font-weight:800}
+.newAlert{background:#1f8a4c;color:#fff;font-weight:800;border-radius:14px;padding:14px 18px;margin-bottom:14px;animation:flash 1s infinite}@keyframes flash{50%{opacity:.6}}
 @media(max-width:760px){.kan{grid-template-columns:1fr}.steps,.stepLabels{grid-template-columns:repeat(5,1fr)}}</style>`)
 
 const PLACES = [
@@ -221,15 +222,24 @@ async function resto() {
     $('main').innerHTML = `<section class="card"><h2>${esc(m.name)}</h2><p>${m.status === 'PENDING_REVIEW' ? t('Votre restaurant est en cours de vérification (permis MAPAQ, NEQ). Nous vous écrirons.', 'Your restaurant is under review (MAPAQ permit, NEQ). We will email you.') : `${t('Statut', 'Status')} : ${esc(m.status)}${m.reviewNote ? ` — ${esc(m.reviewNote)}` : ''}`}</p></section>`
     return
   }
+  // Uber Eats Orders style: a ping and a flashing banner for every new order; screen kept awake.
+  try { state.wake = state.wake ?? await navigator.wakeLock?.request('screen') } catch {}
+  const ping = () => { try { const a = new (window.AudioContext || window.webkitAudioContext)(); [0, 0.25, 0.5].forEach((d) => { const o = a.createOscillator(); const g = a.createGain(); o.frequency.value = 880; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(0.25, a.currentTime + d); o.start(a.currentTime + d); o.stop(a.currentTime + d + 0.18) }); navigator.vibrate?.([200, 100, 200]) } catch {} }
+  let seen = null
   const draw = async () => {
     const [{ orders: live }, { items }] = await Promise.all([api.get(`/api/eats/merchants/${m.id}/orders`), api.get(`/api/eats/merchants/${m.id}`).catch(() => ({ items: [] }))])
     const col = (states) => live.filter((o) => states.includes(o.status))
+    const fresh = col(['PLACED']).map((o) => o.id)
+    const isNew = seen && fresh.some((id) => !seen.includes(id))
+    if (isNew) ping()
+    seen = fresh
     const card = (o, actions) => `<div class="ord"><b>#${o.id.slice(0, 6)}</b> · ${o.fulfillment === 'pickup' ? t('Cueillette', 'Pickup') : t('Livraison', 'Delivery')} · ${fmtDateTime(o.createdAt)}
       <div class="small">${o.items.map((i) => `${i.qty} × ${esc(i.name)}`).join(', ')}</div>${o.note ? `<div class="small">“${esc(o.note)}”</div>` : ''}
       <div class="small">${t('Votre versement', 'Your payout')} : <b>${cad(o.payout?.payoutCents)}</b>${o.courier ? ` · ${t('Livreur', 'Courier')} : ${esc(o.courier.name ?? '')}` : ''}</div>
       <div class="row" style="margin-top:8px">${actions.map(([s, fr, en, cls]) => `<button class="${cls ?? 'secondary'}" data-o="${o.id}" data-s="${s}">${t(fr, en)}</button>`).join('')}</div></div>`
     $('main').innerHTML = `<div class="sectionhead"><span class="eyebrow">${t('TABLEAU DE BORD RESTAURANT', 'RESTAURANT DASHBOARD')}</span><h1>${esc(m.name)}</h1>
       <div class="row"><label class="opt"><input type="checkbox" id="busy" ${m.busy ? 'checked' : ''}> ${t('Mode occupé (pause des commandes)', 'Busy mode (pause orders)')}</label></div></div>
+      ${fresh.length ? `<div class="newAlert">${fresh.length} ${t('nouvelle(s) commande(s) — acceptez-les', 'new order(s) — accept them')}</div>` : ''}
       <div class="kan"><section><h3>${t('Nouvelles', 'New')} (${col(['PLACED']).length})</h3>${col(['PLACED']).map((o) => card(o, [['ACCEPTED', 'Accepter', 'Accept', 'primary'], ['REJECTED', 'Refuser', 'Reject']])).join('')}</section>
       <section><h3>${t('En cuisine', 'In the kitchen')}</h3>${col(['ACCEPTED', 'PREPARING']).map((o) => card(o, o.status === 'ACCEPTED' ? [['PREPARING', 'Commencer', 'Start', 'primary'], ['CANCELLED', 'Annuler', 'Cancel']] : [['READY_FOR_PICKUP', 'Prête', 'Ready', 'primary']])).join('')}</section>
       <section><h3>${t('Prêtes / en route', 'Ready / on the way')}</h3>${col(['READY_FOR_PICKUP', 'PICKED_UP']).map((o) => card(o, o.fulfillment === 'pickup' && o.status === 'READY_FOR_PICKUP' ? [['DELIVERED', 'Remise au client', 'Handed to customer', 'primary']] : [])).join('')}</section></div>
