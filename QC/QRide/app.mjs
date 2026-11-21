@@ -193,6 +193,7 @@ async function liveRide() {
       <h1>${r.status === 'REQUESTED' ? t('Recherche d’un<br>chauffeur…', 'Finding your<br>driver…') : r.status === 'PAYMENT_PENDING' ? t('Confirmation du<br>paiement…', 'Confirming<br>payment…') : statusLabel(r.status)}</h1>
       ${r.status === 'PAYMENT_PENDING' ? `<p>${t('Le montant est autorisé sur votre carte et prélevé seulement à la fin de la course.', 'The amount is authorized on your card and charged only when the trip ends.')}</p>` : ''}
       ${ACTIVE.includes(r.status) ? `<div class="live"><span class="dot"></span><span class="small">${t('Mise à jour automatique', 'Updating automatically')}</span></div>` : ''}
+      ${ACTIVE.includes(r.status) ? `<p class="notice" role="note">● ${recordedNotice()}</p>` : ''}
       ${r.driver && ACTIVE.includes(r.status) ? `<p class="notice">${t('Vérifiez le nom, le véhicule et la plaque avant de monter.', 'Check the name, vehicle and plate before boarding.')}</p>` : ''}
       <div class="row" style="margin-top:20px">${['PAYMENT_PENDING', 'REQUESTED', 'ACCEPTED', 'ARRIVED'].includes(r.status) ? `<button class="secondary" id="cancelRide">${t('Annuler la course', 'Cancel ride')}</button>` : ''}
       ${!ACTIVE.includes(r.status) ? `<button class="primary" id="newRide">${t('Nouvelle course', 'New ride')}</button>` : ''}</div></section>
@@ -258,6 +259,7 @@ async function driver() {
         <div class="row"><button type="button" class="secondary" id="drvLocate">${t('Utiliser ma position', 'Use my location')}</button><button class="primary" id="goOnline">${t('Être en ligne', 'Go online')}</button><button type="button" class="secondary" id="goOffline">${t('Hors ligne', 'Go offline')}</button></div>
         <p class="small" id="drvStatus" role="status">${me.online ? `<span class="status">${t('En ligne', 'Online')}</span>` : `<span class="status status-cancelled">${t('Hors ligne', 'Offline')}</span>`} · ${esc(me.category)} · ${esc(me.vehicle?.make)} ${esc(me.vehicle?.model)} <span class="plate">${esc(me.vehicle?.plate)}</span></p></form></div>
       ${active ? `<div class="card"><h2>${t('Course en cours', 'Current ride')}</h2>${rideCard(active, { asDriver: true })}
+        <p class="notice" role="note">● ${recordedNotice()}</p>
         <div class="row" style="margin-top:14px"><button class="primary" id="advance">${next[active.status][1]}</button>${active.status !== 'IN_PROGRESS' ? `<button class="secondary" id="release">${t('Me désister', 'Release ride')}</button>` : ''}</div></div>` : ''}
       <div class="card"><h2>${t('Demandes à proximité', 'Nearby requests')}</h2>
         ${offersRes.offers?.length ? offersRes.offers.map((o) => `<div class="reviewItem"><div><b>${placeLabel(o.pickup)}</b> → ${placeLabel(o.dropoff)}<br><span class="small">${t('à', '')} ${km(o.pickupDistanceM)} ${t('', 'away')} · ${t('gain', 'earn')} ${cad(o.breakdown.driver.payoutCents)}${o.scheduledFor ? ` · ${fmtDateTime(o.scheduledFor)}` : ''}</span></div>
@@ -316,3 +318,8 @@ installDialog()
   }
   render()
 })()
+
+// "This trip is recorded" (owner 2026-11-20): shown to rider and driver for the whole trip.
+function recordedNotice() {
+  return t('Ce trajet est enregistré : le parcours et les événements du trajet sont conservés pour la sécurité de tous.', 'This trip is recorded: the route and trip events are saved for everyone’s safety.')
+}

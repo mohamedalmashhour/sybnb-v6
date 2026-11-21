@@ -123,6 +123,10 @@ async function main() {
   check('rider prepaid fare + dues + taxes', fresh?.metadata?.prepaid === true && fresh?.metadata?.prepaidAmountMinor === gc?.totalMinor, fresh?.metadata)
   const claim = await call('PATCH', `/api/sr/rides/${ride?.id}/claim`, driver.token)
   check('driver claims the ride', claim.status === 200, claim)
+  const rv = await call('GET', `/api/sr/rides/${ride?.id}`, guest.token)
+  check('rider app is told "this trip is recorded"', rv.j?.ride?.recording?.recorded === true, rv.j?.ride?.recording)
+  const dv = await call('GET', `/api/sr/rides/${ride?.id}`, driver.token)
+  check('driver app is told "this trip is recorded"', dv.j?.ride?.recording?.recorded === true, dv.j?.ride?.recording)
   for (const st of ['DRIVER_ARRIVING', 'IN_PROGRESS', 'COMPLETED']) {
     if (st === 'IN_PROGRESS') {
       // The rider tells the driver the 4-digit pickup code (safety rule), the driver enters it.

@@ -53,6 +53,7 @@ import { getStoredGuestSession } from '../../shared/api/platformApi'
 import { isSrRideLocationConfirmed, type SrRideLocationSource } from './srRideLocationGuard'
 import { srFallbackFareMinor } from './srFareModel'
 import { RecordingControls } from './RecordingControls'
+import { TripRecordedNotice } from './TripRecordedNotice'
 import { publicWebOrigin } from '../../shared/native/nativeShell'
 import { rideDefaultPlace } from '../../shared/country/presentation'
 
@@ -1438,6 +1439,9 @@ export function SrRidePage({ lang }: Props) {
           <h2 style={styles.cardTitle}>{t.status}</h2>
           <Info label={t.rideId} value={ride ? ride.id.slice(0, 8).toUpperCase() : '-'} />
           <Info label={t.status} value={statusText(ride?.status, lang)} dir={isAr ? 'rtl' : 'ltr'} />
+          {ride && ['REQUESTED', 'MATCHING', 'DRIVER_ASSIGNED', 'DRIVER_ARRIVING', 'IN_PROGRESS'].includes(ride.status) && (
+            <TripRecordedNotice lang={lang} audio={Boolean((ride as { recording?: { audio?: boolean } }).recording?.audio)} />
+          )}
           {ride && (ride.pickupCoords || ride.dropoffCoords || ride.driver?.location) && (
             <RideMap
               pickup={ride.pickupCoords}

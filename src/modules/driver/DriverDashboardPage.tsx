@@ -1,4 +1,5 @@
 import { PickupWaitPanel } from './PickupWaitPanel'
+import { TripRecordedNotice } from '../sr/TripRecordedNotice'
 import { LateCancelNotice } from '../sr/LateCancelNotice'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { IdPrivacyBadge } from '../../shared/trust/IdPrivacyBadge'
@@ -1217,6 +1218,7 @@ function RideCard({
       {['DRIVER_ASSIGNED', 'DRIVER_ARRIVING'].includes(ride.status) && (
         <>
           <PickupWaitPanel ride={ride} lang={lang} onRefresh={onRefresh} />
+          <TripRecordedNotice lang={lang} audio={Boolean((ride as { recording?: { audio?: boolean } }).recording?.audio)} />
           <PickupVerifyPanel ride={ride} lang={lang} onRefresh={onRefresh} />
         </>
       )}

@@ -12,6 +12,7 @@ import { refreshSrPricing, readStoredPricing, invalidateSrPricingCache, pricingK
 import { resolveTrafficDistance } from '../lib/traffic-distance.mjs'
 import { signDriverPhotoUrl } from '../lib/driver-photo-storage.mjs'
 import { getDriverRatingSummary, getRiderRatingSummary } from '../lib/driver-rating.mjs'
+import { recordingCaptureEnabled } from './ride-recordings.mjs'
 import { getDriverLocation, getRideCoords, etaMinutesBetween, haversineKm } from '../lib/live-map.mjs'
 import { capsuleProfile } from '../lib/capsule-profile.mjs'
 import { governmentCharges } from '../../wrapping/rides/smart-fare.mjs'
@@ -1174,6 +1175,10 @@ export async function handleSrRides(req, res, url, context) {
     }
     // Pickup wait countdown for both apps (null until the driver taps "I've arrived").
     ridePayload.wait = waitState(ride.metadata)
+    // "This trip is recorded" (owner 2026-11-20): every trip is in the black box (route + events);
+    // audio is true only when in-ride audio recording is switched on. Apps show the notice to both
+    // sides for the whole trip.
+    ridePayload.recording = { recorded: true, audio: recordingCaptureEnabled() }
     // End of trip (owner 2026-11-20): the driver sees the rider's rating; each side sees whether it
     // already rated / tipped, so the app shows the right end-of-trip screen.
     if (ride.driverId === context.user.id) {
