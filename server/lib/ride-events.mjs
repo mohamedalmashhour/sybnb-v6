@@ -57,3 +57,29 @@ export async function logRideEventSafe(client, payload) {
     return null
   }
 }
+
+// Black-box retention (owner 2026-11-20): a trip's recording (route pings + trip events) is kept for
+// 7 days after the trip ends. Any problem must be raised in that week: a ride with a safety report /
+// incident, or a dispute, is kept (safety hold). The ride itself, its receipt and its tax records
+// (6 years, Revenu Québec) are separate and never deleted here. Best-effort; never throws.
+export const BLACK_BOX_RETENTION_DAYS = 7
+export async function purgeExpiredRideEvents(client, { now = new Date(), limit = 500 } = {}) {
+  try {
+    const cutoff = new Date(now.getTime() - BLACK_BOX_RETENTION_DAYS * 864e5)
+    const res = await client.$executeRaw`
+      DELETE FROM ride_events e
+       WHERE e.ride_id IN (
+         SELECT r.id FROM ride_requests r
+          WHERE r.status IN ('COMPLETED', 'CANCELLED')
+            AND r.updated_at < ${cutoff}
+            AND NOT EXISTS (SELECT 1 FROM incidents i WHERE i.ride_id = r.id::text)
+            AND NOT EXISTS (SELECT 1 FROM ride_events d WHERE d.ride_id = r.id AND d.type IN ('DISPUTED', 'SOS'))
+            AND EXISTS (SELECT 1 FROM ride_events x WHERE x.ride_id = r.id)
+          LIMIT ${limit}
+       )`
+    return { purged: Number(res) || 0 }
+  } catch (error) {
+    log.warn('ride_events_purge_failed', { message: error instanceof Error ? error.message : String(error) })
+    return { purged: 0 }
+  }
+}

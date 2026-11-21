@@ -321,5 +321,5 @@ installDialog()
 
 // "This trip is recorded" (owner 2026-11-20): shown to rider and driver for the whole trip.
 function recordedNotice() {
-  return t('Ce trajet est enregistré : le parcours et les événements du trajet sont conservés pour la sécurité de tous.', 'This trip is recorded: the route and trip events are saved for everyone’s safety.')
+  return t('Ce trajet est enregistré : le parcours et les événements du trajet sont conservés 7 jours pour la sécurité de tous. Signalez tout problème dans ce délai.', 'This trip is recorded: the route and trip events are kept for 7 days for everyone’s safety. Report any problem within that week.')
 }

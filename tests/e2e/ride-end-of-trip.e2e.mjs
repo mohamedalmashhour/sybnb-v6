@@ -57,6 +57,27 @@ async function main() {
   const early = await call('POST', `/api/sr/rides/${open.id}/tip`, rider.token, { amountMinor: 1 })
   check('no tip before the ride is completed', code(early) === 'TIP_RIDE_NOT_COMPLETED', early)
 
+  // Black box kept 7 days (owner 2026-11-20); a ride with a problem reported is kept.
+  const { purgeExpiredRideEvents } = await import('../../server/lib/ride-events.mjs')
+  const mk = async (status, ageDays) => {
+    const r = await db().rideRequest.create({ data: { riderId: rider.id, driverId: driver.id, status, fareMinor: 10, currency, metadata: { category: 'SR Economy' } } })
+    await db().rideEvent.createMany({ data: [{ rideId: r.id, type: 'CREATED' }, { rideId: r.id, type: 'LOCATION_PING', lat: 33.5, lng: 36.3 }] })
+    await db().$executeRaw`UPDATE ride_requests SET updated_at = now() - (interval '1 day' * ${ageDays}) WHERE id = ${r.id}::uuid`
+    return r
+  }
+  const old = await mk('COMPLETED', 8)
+  const recent = await mk('COMPLETED', 6)
+  const reported = await mk('COMPLETED', 8)
+  await db().incident.create({ data: { rideId: reported.id, reporterId: rider.id, reporterRole: 'RIDER', type: 'REPORT', note: 'problem' } })
+  const live = await mk('IN_PROGRESS', 8)
+  await purgeExpiredRideEvents(db())
+  const n = async (r) => db().rideEvent.count({ where: { rideId: r.id } })
+  check('trip recording deleted after 7 days', (await n(old)) === 0)
+  check('trip recording kept within the 7 days', (await n(recent)) === 2)
+  check('trip with a reported problem is kept', (await n(reported)) === 2)
+  check('ongoing trip is never purged', (await n(live)) === 2)
+  check('the ride itself (receipt) is kept', Boolean(await db().rideRequest.findUnique({ where: { id: old.id } })))
+
   console.log(`\n==== END-OF-TRIP E2E: ${pass} passed, ${fail} failed ====`)
   await disconnectDb()
   process.exit(fail ? 1 : 0)

@@ -13,8 +13,8 @@ export function TripRecordedNotice({ lang, audio = false }: { lang: Lang; audio?
         <strong>{tr('هذه الرحلة مسجَّلة', 'This trip is recorded', 'Ce trajet est enregistré')}</strong>
         <div style={{ fontSize: 13, opacity: 0.85 }}>
           {audio
-            ? tr('يُحفظ مسار الرحلة وأحداثها وقد يُسجَّل الصوت، من أجل سلامة الجميع.', 'The route, trip events and audio may be recorded for everyone’s safety.', 'Le parcours, les événements du trajet et l’audio peuvent être enregistrés pour la sécurité de tous.')
-            : tr('يُحفظ مسار الرحلة وأحداثها من أجل سلامة الجميع.', 'The route and trip events are saved for everyone’s safety.', 'Le parcours et les événements du trajet sont conservés pour la sécurité de tous.')}
+            ? tr('يُحفظ مسار الرحلة وأحداثها وقد يُسجَّل الصوت لمدة 7 أيام، من أجل سلامة الجميع. أبلغ عن أي مشكلة خلال هذه المدة.', 'The route, trip events and audio may be recorded for everyone’s safety, and kept for 7 days. Report any problem within that week.', 'Le parcours, les événements du trajet et l’audio peuvent être enregistrés pour la sécurité de tous, et conservés 7 jours. Signalez tout problème dans ce délai.')
+            : tr('يُحفظ مسار الرحلة وأحداثها لمدة 7 أيام من أجل سلامة الجميع. أبلغ عن أي مشكلة خلال هذه المدة.', 'The route and trip events are saved for everyone’s safety and kept for 7 days. Report any problem within that week.', 'Le parcours et les événements du trajet sont conservés 7 jours pour la sécurité de tous. Signalez tout problème dans ce délai.')}
         </div>
       </div>
     </div>

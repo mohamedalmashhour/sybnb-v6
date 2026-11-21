@@ -32,6 +32,7 @@ import { handleAgents } from './routes/agents.mjs'
 import { handleOpenHouses } from './routes/open-houses.mjs'
 import { handleMarket } from './routes/market.mjs'
 import { handleRideRecordings, purgeExpiredRecordings } from './routes/ride-recordings.mjs'
+import { purgeExpiredRideEvents } from './lib/ride-events.mjs'
 import { runSavedSearchAlerts } from './lib/saved-search-alerts.mjs'
 import { handleMe } from './routes/me.mjs'
 import { handleHostProfile } from './routes/host-profile.mjs'
@@ -189,6 +190,7 @@ async function handleInternalTick(res) {
     const auctionsClosed = await closeDueAuctions().catch(() => ({ closed: 0 }))
     const alerts = await runSavedSearchAlerts().catch(() => ({ notified: 0 }))
     const purged = await purgeExpiredRecordings().catch(() => ({ purged: 0 }))
+    await purgeExpiredRideEvents(db()).catch(() => ({ purged: 0 }))
     // Safety Phase 2 (2026-10-10): scan active rides for time/signal anomalies on the same timer.
     // detectRideAnomalies() is best-effort and never throws; the extra .catch is pure belt-and-braces.
     const anomalies = await detectRideAnomalies().catch(() => ({ scanned: 0, flagged: 0 }))
@@ -503,6 +505,7 @@ async function runDispatchHeartbeat() {
     await closeDueAuctions().catch(() => ({ closed: 0 }))
     await runSavedSearchAlerts().catch(() => ({ notified: 0 }))
     await purgeExpiredRecordings().catch(() => ({ purged: 0 }))
+    await purgeExpiredRideEvents(db()).catch(() => ({ purged: 0 }))
   } catch (error) {
     log.error('dispatch_heartbeat_failed', { error: error instanceof Error ? error.message : String(error) })
   }
