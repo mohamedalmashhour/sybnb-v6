@@ -1,16 +1,15 @@
 # Privacy Policy — Q STAY and Q RIDE
 
-> **DRAFT — NOT IN EFFECT.** To be reviewed and approved by the owner (ideally with a lawyer)
-> before publishing at qstay.ca/privacy and qrides.ca/privacy. `[[TO CONFIRM]]` items are decisions
-> still to make. The French version prevails.
+> **DRAFT — NOT IN EFFECT.** Awaiting owner approval before publishing at qstay.ca/privacy and
+> qrides.ca/privacy. The French version prevails. **Changes in this version are in bold.**
 
 **Company:** 9375-7649 Québec Inc. (NEQ 1173544397), operator of the Q STAY and Q RIDE apps
 (Portiqos platforms), 207-805 boul. Chomedey, Laval, Québec H7V 0B1.
-**Effective date:** `[[TO CONFIRM]]`
+**Effective date:** **date of publication on qstay.ca and qrides.ca**
 
 ## 1. Person in charge of personal information
 Under Québec's Law 25, the person in charge is **Mohamed Almashhour**, President.
-Email: **privacy@qstay.ca** `[[TO CONFIRM: address to create]]`.
+Email: **privacy@qstay.ca**.
 
 ## 2. What we collect
 - **Account:** name, email, phone number, language. Sign-in with a code sent by email.
@@ -25,7 +24,7 @@ Email: **privacy@qstay.ca** `[[TO CONFIRM: address to create]]`.
   GPS positions). **No audio or video is recorded.** A "This trip is recorded" notice is shown to
   the rider and driver.
 - **Payments:** amount, taxes, transaction references. Card numbers are handled by our payment
-  provider; we do not store them. `[[TO CONFIRM: provider, e.g. Stripe]]`
+  provider; we do not store them. Payment provider: **Stripe**.
 - **Technical data:** sign-in logs, device type, IP address, for security.
 
 ## 3. Why we use it
@@ -38,20 +37,20 @@ complaints; meet our legal obligations (CTQ, Revenu Québec, Tourisme Québec).
 We do not sell your information. We share it only:
 - between the parties to a booking or trip (first name, vehicle and plate, property address after
   booking);
-- with our service providers: hosting and database, email delivery, maps (Google Maps), payments
-  `[[TO CONFIRM: list and country of each provider]]`;
+- with our service providers: hosting and database, email delivery, maps (Google Maps), payments: **Render (servers, United States), Neon (database, United States), Google (email and
+  Google Maps, United States), Stripe (payments, United States)**;
 - with authorities when the law requires it (e.g. Revenu Québec, the transport commission, police
   with a legal request).
 
 ## 5. Transfers outside Québec
-Some providers may store data outside Québec (e.g. the United States). Before any transfer we
-assess the protection offered, as Law 25 requires. `[[TO CONFIRM]]`
+**Our providers (Render, Neon, Google, Stripe) store data in the United States.** Before any transfer we
+assess the protection offered, as Law 25 requires.
 
 ## 6. How long we keep it
 - Trip recording: **7 days** after the trip ends, unless an incident, emergency (SOS) or complaint
   is reported within that time (kept until resolved).
-- Bookings, trips, receipts and tax records: **6 years** (tax obligations). `[[TO CONFIRM]]`
-- Driver and host documents: while the account is active, then `[[TO CONFIRM]]`.
+- Bookings, trips, receipts and tax records: **6 years** (tax obligations).
+- Driver and host documents: while the account is active, then **3 years after the account is closed**.
 - Closed accounts: deleted or anonymized, except what the law requires us to keep.
 
 ## 7. Your rights

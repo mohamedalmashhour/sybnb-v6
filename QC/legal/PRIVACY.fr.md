@@ -1,16 +1,15 @@
 # Politique de confidentialité — Q STAY et Q RIDE
 
-> **PROJET — NON EN VIGUEUR.** À réviser et approuver par le propriétaire (et idéalement un avocat)
-> avant publication sur qstay.ca/privacy et qrides.ca/privacy. Les points `[[À CONFIRMER]]` sont des
-> décisions à prendre.
+> **PROJET — NON EN VIGUEUR.** En attente d'approbation du propriétaire avant publication sur
+> qstay.ca/privacy et qrides.ca/privacy. **Les changements de cette version sont en gras.**
 
 **Entreprise :** 9375-7649 Québec Inc. (NEQ 1173544397), exploitant les applications Q STAY et Q RIDE
 (plateformes Portiqos), 207-805, boul. Chomedey, Laval (Québec) H7V 0B1.
-**Date d'entrée en vigueur :** `[[À CONFIRMER]]`
+**Date d'entrée en vigueur :** **date de publication sur qstay.ca et qrides.ca**
 
 ## 1. Responsable de la protection des renseignements personnels
 Conformément à la Loi 25 du Québec, la personne responsable est **Mohamed Almashhour**, président.
-Courriel : **privacy@qstay.ca** `[[À CONFIRMER : adresse à créer]]`.
+Courriel : **privacy@qstay.ca**.
 
 ## 2. Renseignements que nous recueillons
 - **Compte :** nom, adresse courriel, numéro de téléphone, langue. Connexion par code envoyé par courriel.
@@ -25,7 +24,7 @@ Courriel : **privacy@qstay.ca** `[[À CONFIRMER : adresse à créer]]`.
   événements du trajet (heures, statuts, positions GPS). **Aucun son ni aucune image ne sont
   enregistrés.** Un avis « Ce trajet est enregistré » est affiché au passager et au chauffeur.
 - **Paiements :** montant, taxes, références de transaction. Les numéros de carte sont traités par
-  notre fournisseur de paiement; nous ne les conservons pas. `[[À CONFIRMER : fournisseur, ex. Stripe]]`
+  notre fournisseur de paiement; nous ne les conservons pas. Fournisseur de paiement : **Stripe**.
 - **Données techniques :** journaux de connexion, type d'appareil, adresse IP, à des fins de sécurité.
 
 ## 3. Pourquoi nous les utilisons
@@ -40,19 +39,19 @@ Nous ne vendons pas vos renseignements. Nous les partageons seulement :
 - entre les parties d'une réservation ou d'un trajet (prénom, véhicule et plaque, adresse du logement
   après réservation);
 - avec nos fournisseurs : hébergement et base de données, envoi de courriels, cartes (Google Maps),
-  paiement `[[À CONFIRMER : liste et pays de chaque fournisseur]]`;
+  paiement : **Render (serveurs, États-Unis), Neon (base de données, États-Unis), Google (courriel et Google Maps, États-Unis), Stripe (paiement, États-Unis)**;
 - avec les autorités lorsque la loi l'exige (ex. Revenu Québec, Commission des transports, police
   sur demande légale).
 
 ## 5. Communication hors du Québec
-Certains fournisseurs peuvent conserver des données à l'extérieur du Québec (ex. États-Unis). Avant
-tout transfert, nous évaluons la protection offerte, comme l'exige la Loi 25. `[[À CONFIRMER]]`
+**Nos fournisseurs (Render, Neon, Google, Stripe) conservent des données aux États-Unis.** Avant
+tout transfert, nous évaluons la protection offerte, comme l'exige la Loi 25.
 
 ## 6. Durée de conservation
 - Enregistrement du trajet : **7 jours** après la fin du trajet, sauf si un incident, un appel
   d'urgence ou une plainte est signalé pendant ce délai (conservé jusqu'au règlement).
-- Réservations, trajets, reçus et données fiscales : **6 ans** (obligations fiscales). `[[À CONFIRMER]]`
-- Documents des chauffeurs et hôtes : tant que le compte est actif, puis `[[À CONFIRMER]]`.
+- Réservations, trajets, reçus et données fiscales : **6 ans** (obligations fiscales).
+- Documents des chauffeurs et hôtes : tant que le compte est actif, puis **3 ans après la fermeture du compte**.
 - Compte fermé : supprimé ou anonymisé, sauf ce que la loi nous oblige à garder.
 
 ## 7. Vos droits
