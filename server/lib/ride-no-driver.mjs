@@ -7,7 +7,7 @@ import { Prisma } from '@prisma/client'
 import { db } from './prisma.mjs'
 import { notifyUserMulti } from './notifications.mjs'
 
-const VEHICLE_TO_RIDE_CATEGORY = { BIKE: 'SR Bike', ECONOMY: 'SR Economy', COMFORT: 'SR Comfort', SUV: 'SR SUV', VAN: 'SR Van', VIP: 'SR VIP' }
+const VEHICLE_TO_RIDE_CATEGORY = { BIKE: 'SR Bike', ECONOMY: 'SR Economy', COMFORT: 'SR Comfort', SUV: 'SR SUV', VAN: 'SR Van', VIP: 'SR VIP', GREEN: 'SR Green' }
 const num = (name, def, min, max) => {
   const raw = Number(process.env[name])
   return Number.isFinite(raw) && raw >= min && raw <= max ? raw : def

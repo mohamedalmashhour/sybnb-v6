@@ -15,6 +15,13 @@ import { sendPushNotification } from './push-notifications.mjs'
 import { logRideEventSafe } from './ride-events.mjs'
 import { dutyBlockers } from '../routes/driver-base.mjs'
 import { isRateLimited } from './rateLimit.mjs'
+import { RIDE_CATEGORY_TO_VEHICLE } from './vehicle-category.mjs'
+
+// CASE <ride category> WHEN 'SR Economy' THEN 'ECONOMY' ... built from the shared mapping, so every
+// category (incl. SR VIP / SR Green) is dispatchable and the list can never drift from the claim gate.
+const CATEGORY_CASE_SQL = Prisma.sql`CASE (SELECT metadata->>'category' FROM ride) ${Prisma.join(
+  Object.entries(RIDE_CATEGORY_TO_VEHICLE).map(([cat, veh]) => Prisma.sql`WHEN ${cat} THEN ${veh}`), ' ',
+)} ELSE NULL END`
 
 // Env knobs, clamped to sane bounds so a bad deploy value can't disable dispatch or offer forever.
 function envInt(name, def, min, max) {
@@ -52,6 +59,8 @@ export async function findNextDriverForRide(ride, excludeIds = []) {
   const accessibilitySql = ride.accessibilityRequired
     ? Prisma.sql`AND dp.accessibility_capable = true`
     : Prisma.empty
+  // Pets: only drivers who opted in are offered a ride booked with a pet.
+  const petSql = Prisma.sql`AND (COALESCE((SELECT metadata->>'pet' FROM ride), 'false') <> 'true' OR dp.accepts_pets = true)`
   // Safety gates mirror the manual /claim path: registration expiry is ALWAYS enforced (added
   // unconditionally below); the mechanical-inspection requirement is gated by the same env flag
   // SR_REQUIRE_VEHICLE_INSPECTION (default on -- only an explicit 'false'/'0' skips it).
@@ -84,19 +93,14 @@ export async function findNextDriverForRide(ride, excludeIds = []) {
         AND dp.vehicle_plate IS NOT NULL
         AND dp.vehicle_status = 'APPROVED'
         AND dp.vehicle_category IS NOT NULL
-        AND dp.vehicle_category::text = CASE (SELECT metadata->>'category' FROM ride)
-            WHEN 'SR Bike' THEN 'BIKE'
-            WHEN 'SR Economy' THEN 'ECONOMY'
-            WHEN 'SR Comfort' THEN 'COMFORT'
-            WHEN 'SR SUV' THEN 'SUV'
-            WHEN 'SR Van' THEN 'VAN'
-            ELSE NULL END
+        AND dp.vehicle_category::text = ${CATEGORY_CASE_SQL}
         AND (dp.registration_expires_at IS NULL OR dp.registration_expires_at > now())
         ${inspectionSql}
         AND dp.last_location_updated_at >= now() - (interval '1 second' * ${ONLINE_WINDOW_SECONDS})
         AND dp.user_id <> (SELECT rider_id FROM ride)
         AND dp.user_id <> ALL(${excludeSql})
         ${accessibilitySql}
+        ${petSql}
         AND NOT EXISTS (
           SELECT 1 FROM ride_requests ar
           WHERE ar.driver_id = dp.user_id

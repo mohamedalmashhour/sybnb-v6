@@ -164,9 +164,14 @@ export async function handleDriver(req, res, url, context) {
     const body = await readJson(req)
     const profile = await db().driverProfile.upsert({
       where: { userId: context.user.id },
-      create: { userId: context.user.id, accessibilityCapable: Boolean(body.accessibilityCapable) },
-      update: { accessibilityCapable: Boolean(body.accessibilityCapable) },
-      select: { accessibilityCapable: true },
+      // acceptsPets (owner 2026-11-20): the driver opts in to rides booked with a pet. Each field is
+      // changed only when sent, so toggling one never resets the other.
+      create: { userId: context.user.id, accessibilityCapable: Boolean(body.accessibilityCapable), acceptsPets: Boolean(body.acceptsPets) },
+      update: {
+        ...('accessibilityCapable' in body ? { accessibilityCapable: Boolean(body.accessibilityCapable) } : {}),
+        ...('acceptsPets' in body ? { acceptsPets: Boolean(body.acceptsPets) } : {}),
+      },
+      select: { accessibilityCapable: true, acceptsPets: true },
     })
     return json(res, 200, { ok: true, driverProfile: profile })
   }

@@ -72,7 +72,12 @@ export const profile = Object.freeze({
         name: { fr: 'XL', en: 'XL' }, blurb: { fr: 'VUS ou fourgonnette, jusqu’à 6 passagers', en: 'SUVs and minivans for up to 6' } },
       PREMIUM: { baseCents: 700, perKmCents: 200, perMinCents: 55, minimumCents: 1800, seats: 4,
         name: { fr: 'Premium', en: 'Premium' }, blurb: { fr: 'Berlines haut de gamme, chauffeurs les mieux notés', en: 'High-end cars, top-rated drivers' } },
+      GREEN: { baseCents: 375, perKmCents: 100, perMinCents: 32, minimumCents: 850, seats: 4,
+        name: { fr: 'Électrique', en: 'Electric' }, blurb: { fr: 'Véhicules électriques ou hybrides', en: 'Electric or hybrid cars' } },
     },
+    // Ride options (Uber/Lyft-style). Pet: flat fee added to the fare (taxed like the fare, paid to the
+    // driver), only drivers who accept pets are offered. Accessible: wheelchair-accessible vehicle.
+    options: { petFeeCents: 500, accessible: true },
     bookingFeeCents: 250,
     driverCommissionBp: 2500,
     // Average urban speed used to estimate duration until a routing provider is connected.

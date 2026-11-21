@@ -148,6 +148,30 @@ async function switchOpenRideCategory(existing, category) {
 // The active country's pricing pack (the master never imports a country directly).
 const P = () => ridePricingForActiveCountry().pack
 
+// A category must be one the active country offers (else it would be priced at a fallback tier).
+function assertCategoryOffered(category) {
+  if (category && !P().SR_CATEGORIES.includes(String(category))) {
+    const error = new Error('This ride category is not offered here.')
+    error.statusCode = 400
+    error.code = 'RIDE_CATEGORY_NOT_OFFERED'
+    error.expose = true
+    throw error
+  }
+}
+// Pet fee for a request that asks for a pet; refuses when the country offers no pet option.
+function petFeeFor(body) {
+  if (!body?.pet) return 0
+  const fee = P().RIDE_OPTIONS?.petFeeMinor
+  if (!Number.isInteger(fee) || fee <= 0) {
+    const error = new Error('Riding with a pet is not offered here.')
+    error.statusCode = 400
+    error.code = 'RIDE_PET_NOT_OFFERED'
+    error.expose = true
+    throw error
+  }
+  return fee
+}
+
 // Sample fares so the admin sees what a config does: per class, a short city trip, a 15 km trip and
 // the Damascus airport run's distance, at noon on a weekday (no peak, night or weekend factor).
 const PRICING_SAMPLE_TRIPS = [
@@ -328,6 +352,16 @@ async function claimRideForDriver(context, rideId, { requireOfferForCaller = fal
   // SR Ride vs. Uber gap-closure (P2 #16): enforced, not decorative -- a rider who marked
   // accessibilityRequired genuinely needs a driver who self-declared their vehicle as capable.
   // Real matching, not just a badge nobody has to honor (CAPSULE_RULES.noFakeTrustSignal).
+  if (existing.metadata?.pet === true) {
+    const petProfile = await db().driverProfile.findUnique({ where: { userId: context.user.id }, select: { acceptsPets: true } })
+    if (!petProfile?.acceptsPets) {
+      const error = new Error('This ride is booked with a pet; only drivers who accept pets can take it.')
+      error.statusCode = 403
+      error.code = 'RIDE_PET_MISMATCH'
+      error.expose = true
+      throw error
+    }
+  }
   if (existing.accessibilityRequired) {
     const claimingDriverProfile = await db().driverProfile.findUnique({
       where: { userId: context.user.id },
@@ -555,6 +589,7 @@ export async function handleSrRides(req, res, url, context) {
       error.expose = true
       throw error
     }
+    assertCategoryOffered(body.category)
     const quote = await computeSrQuoteWithTraffic({
       pickup: body.pickup,
       dropoff: body.dropoff,
@@ -568,6 +603,8 @@ export async function handleSrRides(req, res, url, context) {
       bagCount: body.bagCount,
       scheduled: Boolean(body.scheduled) || Boolean(body.scheduledFor),
     })
+    const petFeeMinor = petFeeFor(body)
+    if (petFeeMinor) Object.assign(quote, { petFeeMinor, fareMinor: quote.fareMinor + petFeeMinor })
     return json(res, 200, { ok: true, quote })
   }
 
@@ -584,6 +621,7 @@ export async function handleSrRides(req, res, url, context) {
       error.expose = true
       throw error
     }
+    assertCategoryOffered(category)
     const pickup = String(body.pickup || '')
     const dropoff = String(body.dropoff || '')
     // SR Ride vs. Uber gap-closure (P2 #14): up to 3 intermediate stops, matching Uber's own
@@ -691,7 +729,10 @@ export async function handleSrRides(req, res, url, context) {
     // rides-fleet delivery primitive, NOT a food/merchant marketplace.
     const deliveryOnly = Boolean(body.deliveryOnly)
 
-    const finalFareMinor = quote.fareMinor - discountMinor + bonusMinor
+    // Pet option (country setting): flat fee added to the fare, so it is taxed like the fare and paid
+    // to the driver; dispatch offers the ride only to drivers who accept pets.
+    const petFeeMinor = petFeeFor(body)
+    const finalFareMinor = quote.fareMinor - discountMinor + bonusMinor + petFeeMinor
     // Government charges on the final fare (country setting; Québec: $0.90 dues + GST/QST, none for
     // Syria). Snapshotted on the ride; the rider prepays fare + charges; the charges are recorded in
     // the company's government accounts at completion and never shared with the driver.
@@ -733,6 +774,9 @@ export async function handleSrRides(req, res, url, context) {
         pickupCode: generatePickupCode(),
         // Package delivery (gap-closure #4b): set after the spread for the same anti-injection reason.
         deliveryOnly,
+        // Pet option: set after the client spread so it always matches the fee charged.
+        pet: petFeeMinor > 0,
+        ...(petFeeMinor ? { petFeeMinor } : {}),
         ...(governmentChargesSnap ? { governmentCharges: governmentChargesSnap } : {}),
         // Pricing factors captured at booking time (audit trail of why this fare was charged).
         fareFactors: {
@@ -1489,7 +1533,7 @@ export async function handleSrRides(req, res, url, context) {
   if (url.pathname === '/api/sr/categories') {
     if (req.method !== 'GET') return methodNotAllowed(res, ['GET'])
     const names = P().CATEGORY_NAMES || {}
-    return json(res, 200, { ok: true, categories: P().SR_CATEGORIES.map((key) => ({ key, ...(names[key] || {}) })) })
+    return json(res, 200, { ok: true, categories: P().SR_CATEGORIES.map((key) => ({ key, ...(names[key] || {}) })), options: P().RIDE_OPTIONS || {} })
   }
 
   if (url.pathname === '/api/sr/rates') {

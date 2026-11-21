@@ -10,9 +10,10 @@ export const RIDE_CATEGORY_TO_VEHICLE = {
   'SR SUV': 'SUV',
   'SR Van': 'VAN',
   'SR VIP': 'VIP',
+  'SR Green': 'GREEN', // electric / hybrid (Uber Green-style)
 }
 
-export const VEHICLE_CATEGORY_VALUES = ['BIKE', 'ECONOMY', 'COMFORT', 'SUV', 'VAN', 'VIP']
+export const VEHICLE_CATEGORY_VALUES = ['BIKE', 'ECONOMY', 'COMFORT', 'SUV', 'VAN', 'VIP', 'GREEN']
 
 // Map a ride category string to its VehicleCategory enum value, or null if unknown/missing.
 // True only for the exact ride-category names the app sends ('SR Bike', 'SR Economy', ...). An unknown

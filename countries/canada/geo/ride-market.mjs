@@ -25,7 +25,7 @@ export const QUEBEC_RIDE_MARKET = Object.freeze({
     { lat: 46.7911, lng: -71.3933 }, // Québec City Jean-Lesage (YQB)
   ],
   airportRadiusKm: 3,
-  qualityFactors: { 'SR Economy': 1, 'SR Comfort': 1.3, 'SR SUV': 1.6, 'SR VIP': 2.1 },
+  qualityFactors: { 'SR Economy': 1, 'SR Comfort': 1.3, 'SR SUV': 1.6, 'SR VIP': 2.1, 'SR Green': 1.05 },
   fallbackCategory: 'SR Economy',
   defaultDistanceKm: 6,
 })

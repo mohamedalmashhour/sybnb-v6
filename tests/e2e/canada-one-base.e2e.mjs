@@ -90,9 +90,16 @@ async function main() {
   check('rider total = fare + dues + taxes', rq.charges?.totalMinor === base + rq.charges.taxMinor, rq.charges)
 
   const cats = await call('GET', '/api/sr/categories', guest.token)
-  check('Canada offers Standard, Comfort, XL, Premium (Uber/Lyft line-up)', cats.status === 200 && cats.j?.categories?.map((c) => c.name?.en).join(',') === 'Standard,Comfort,XL,Premium', cats.j)
+  check('Canada offers Standard, Comfort, XL, Premium, Electric (Uber/Lyft line-up)', cats.status === 200 && cats.j?.categories?.map((c) => c.name?.en).join(',') === 'Standard,Comfort,XL,Premium,Electric', cats.j)
   const prem = await call('POST', '/api/sr/quote', guest.token, { pickup: 'Montréal centre-ville', dropoff: 'Plateau', category: 'SR VIP', pickupCoords: { lat: 45.5017, lng: -73.5673 }, dropoffCoords: { lat: 45.522, lng: -73.585 } })
   check('Premium costs more than Standard and shows its name', (prem.j?.quote?.fareMinor || 0) > rq.fareMinor && prem.j?.quote?.categoryInfo?.name?.fr === 'Premium', prem.j?.quote)
+
+  check('pet and accessible options offered', cats.j?.options?.petFeeMinor === 500 && cats.j?.options?.accessible === true, cats.j?.options)
+  const petQ = await call('POST', '/api/sr/quote', guest.token, { pickup: 'Montréal centre-ville', dropoff: 'Plateau', category: 'SR Economy', pet: true, pickupCoords: { lat: 45.5017, lng: -73.5673 }, dropoffCoords: { lat: 45.522, lng: -73.585 } })
+  const ecoQ = await call('POST', '/api/sr/quote', guest.token, { pickup: 'Montréal centre-ville', dropoff: 'Plateau', category: 'SR Economy', pickupCoords: { lat: 45.5017, lng: -73.5673 }, dropoffCoords: { lat: 45.522, lng: -73.585 } })
+  check('pet adds $5.00 to the fare', petQ.j?.quote?.petFeeMinor === 500 && petQ.j?.quote?.fareMinor === ecoQ.j?.quote?.fareMinor + 500, { pet: petQ.j?.quote?.fareMinor, eco: ecoQ.j?.quote?.fareMinor })
+  const bike = await call('POST', '/api/sr/quote', guest.token, { pickup: 'Montréal centre-ville', dropoff: 'Plateau', category: 'SR Bike', pickupCoords: { lat: 45.5017, lng: -73.5673 }, dropoffCoords: { lat: 45.522, lng: -73.585 } })
+  check('a category Canada does not offer is refused', code(bike) === 'RIDE_CATEGORY_NOT_OFFERED', bike)
 
   console.log('\n=== 5. DRIVER MUST BE GST/QST-REGISTERED (Revenu Québec) ===')
   const driver = await seedUser('driver', ['GUEST', 'DRIVER'], { idDocumentStatus: 'APPROVED' })
