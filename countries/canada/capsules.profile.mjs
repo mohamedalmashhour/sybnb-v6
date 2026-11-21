@@ -64,6 +64,35 @@ export function toCapsuleProfile(base) {
     operatingModel: 'OPERATOR_UNDER_AGREEMENT',
     cancellation: { graceSeconds: 120, feePercent: 15, noShowPercent: 100, waitMinutes: 5, arrivalRadiusM: 300, minFeeMinor: 0 },
   },
+  // DELIVERY (Q EAT, Uber Eats model). ⚠️ PLACEHOLDER numbers modelled on Uber Eats Canada — every
+  // amount is a variable to confirm before launch. Taxes: in Québec restaurant meals are taxable
+  // (GST + QST) while basic groceries are zero-rated — merchants of category 'grocery' must override
+  // foodTaxes per item; to confirm with the accountant (taxes.status stays PENDING).
+  delivery: {
+    minOrderMinor: 0,
+    smallOrder: { thresholdMinor: 1000, maxMinor: 300 },
+    deliveryFee: { baseMinor: 199, perKmMinor: 50, includedKm: 2, maxMinor: 799 },
+    freeDeliveryOverMinor: 0,
+    serviceFee: { bp: 1500, minMinor: 200, maxMinor: 600 },
+    merchantCommissionBp: 2000,
+    pickupCommissionBp: 600,
+    courierPay: { baseMinor: 300, perKmMinor: 60, minimumMinor: 400 },
+    foodTaxes: ['GST', 'QST'],
+    feeTaxes: ['GST', 'QST'],
+    maxBusyBp: 15000,
+    maxRadiusM: 8000,
+    roadFactor: base.rides.roadFactor,
+    courierKmh: 20,
+    defaultPrepMinutes: 20,
+    handoffMinutes: 5,
+    courierSearchRadiusM: 5000,
+    maxOffers: 10,
+    vehicleTypes: ['bike', 'ebike', 'moto', 'car'],
+    // Alcohol delivery in Québec needs a permit tied to the restaurant/grocer; kept off until reviewed.
+    blockedCategories: ['alcohol', 'cannabis', 'tobacco', 'pharmacy'],
+    serviceBounds: base.rides.serviceBounds,
+    cancellation: { foodCostBp: 10000 },
+  },
 })
 }
 

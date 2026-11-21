@@ -64,4 +64,29 @@ export const profile = Object.freeze({
     requiredDriverTaxNumbers: [], // e.g. ['gst', 'qst'] where drivers must be tax-registered
     cancellation: { graceSeconds: 120, feePercent: 15, noShowPercent: 100, waitMinutes: 5, arrivalRadiusM: 300, minFeeMinor: 0 },
   },
+  // DELIVERY (Uber Eats model) — food & grocery. All amounts/rates are country variables.
+  delivery: {
+    minOrderMinor: 0,            // merchant may set its own; 0 = none
+    smallOrder: { thresholdMinor: 0, maxMinor: 0 }, // fee tops up small baskets instead of refusing (null = refuse below minimum)
+    deliveryFee: { baseMinor: 0, perKmMinor: 0, includedKm: 0, maxMinor: 0 },
+    freeDeliveryOverMinor: 0,    // 0 = never free
+    serviceFee: { bp: 0, minMinor: 0, maxMinor: 0 },
+    merchantCommissionBp: 2000,  // on the menu price, delivery orders
+    pickupCommissionBp: 1000,    // customer collects
+    courierPay: { baseMinor: 0, perKmMinor: 0, minimumMinor: 0 },
+    foodTaxes: [],               // tax codes on the goods (many countries exempt basic groceries)
+    feeTaxes: [],                // tax codes on delivery/service/small-order fees
+    maxBusyBp: 10000,            // busy-time multiplier cap on the delivery fee
+    maxRadiusM: 8000,
+    roadFactor: 1.3,
+    courierKmh: 20,
+    defaultPrepMinutes: 20,
+    handoffMinutes: 5,
+    courierSearchRadiusM: 5000,
+    maxOffers: 10,
+    vehicleTypes: ['bike', 'moto', 'car'],
+    blockedCategories: ['alcohol', 'cannabis', 'tobacco', 'pharmacy'],
+    serviceBounds: null,
+    cancellation: { foodCostBp: 10000 }, // share of the subtotal kept once the merchant accepted
+  },
 })

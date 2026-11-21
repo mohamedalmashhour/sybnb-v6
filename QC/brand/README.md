@@ -5,6 +5,7 @@ Official logos supplied by Mohamed (Nov 21, 2026).
 | Brand | Slogan | Files |
 |---|---|---|
 | Q STAY | Stay Better, Anywhere. | qstay-logo.png (trimmed), qstay-logo-full.png (original), qstay-mark.png (Q only) |
+| Q EAT | Eat Smart, Savor More. | qeat-logo.png, qeat-logo-full.png, qeat-mark.png |
 | Q RIDE | Ride Smart, Arrive Easy. | qride-logo.png, qride-logo-full.png, qride-mark.png |
 
 App icons: `*-icon-1024.png` (App Store, no transparency), `*-icon-512.png` (Google Play), `*-adaptive-fg.png` (Android adaptive/maskable, safe zone padding).

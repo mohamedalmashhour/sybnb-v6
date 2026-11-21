@@ -1,5 +1,5 @@
 // Fail-closed check that a country profile has everything the capsules need.
-export function capsuleProfileProblems(p, { stays = true, rides = true } = {}) {
+export function capsuleProfileProblems(p, { stays = true, rides = true, delivery = false } = {}) {
   const out = []
   const need = (cond, msg) => { if (!cond) out.push(msg) }
   need(p?.key, 'missing key')
@@ -27,6 +27,17 @@ export function capsuleProfileProblems(p, { stays = true, rides = true } = {}) {
         for (const f of ['baseMinor', 'perKmMinor', 'perMinMinor', 'minimumMinor']) need(Number.isInteger(c[f]) && c[f] >= 0, `rides.categories.${k}.${f} must be a non-negative integer`)
       }
       known(r.taxes, 'rides.taxes')
+    }
+  }
+  if (delivery) {
+    const d = p?.delivery
+    need(d, 'missing delivery section')
+    if (d) {
+      for (const [k, f] of [['deliveryFee', ['baseMinor', 'perKmMinor']], ['courierPay', ['baseMinor', 'perKmMinor']]]) {
+        for (const x of f) need(Number.isInteger(d[k]?.[x]) && d[k][x] >= 0, `delivery.${k}.${x} must be a non-negative integer`)
+      }
+      need(Number.isInteger(d.merchantCommissionBp) && d.merchantCommissionBp >= 0 && d.merchantCommissionBp <= 10000, 'delivery.merchantCommissionBp must be 0..10000')
+      known(d.foodTaxes, 'delivery.foodTaxes'); known(d.feeTaxes, 'delivery.feeTaxes')
     }
   }
   return out
