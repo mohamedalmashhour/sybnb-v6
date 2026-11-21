@@ -4,7 +4,7 @@ import { profile as baseProfile } from './profile.mjs'
 import { canadaMapPresentation } from './maps.public.mjs'
 import { QUEBEC_RIDE_MARKET } from './geo/ride-market.mjs'
 
-const cat = (c) => ({ baseMinor: c.baseCents, perKmMinor: c.perKmCents, perMinMinor: c.perMinCents, minimumMinor: c.minimumCents, seats: c.seats })
+const cat = (c) => ({ baseMinor: c.baseCents, perKmMinor: c.perKmCents, perMinMinor: c.perMinCents, minimumMinor: c.minimumCents, seats: c.seats, ...(c.name ? { name: c.name, blurb: c.blurb } : {}) })
 
 // ⚠️ PAYMENTS AND PRICES ARE VARIABLES (owner 2026-11-20): adjust here, per country, later.
 // toCapsuleProfile(base) maps a Canada base profile (QC/server passes its own) to capsule settings.

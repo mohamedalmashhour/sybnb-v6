@@ -63,9 +63,15 @@ export const profile = Object.freeze({
   rides: {
     // Non-taxi categories only. Taxi tariffs are regulated and not offered until approved.
     categories: {
-      STANDARD: { baseCents: 350, perKmCents: 95, perMinCents: 30, minimumCents: 800, seats: 4 },
-      COMFORT: { baseCents: 450, perKmCents: 125, perMinCents: 40, minimumCents: 1100, seats: 4 },
-      XL: { baseCents: 550, perKmCents: 160, perMinCents: 45, minimumCents: 1400, seats: 6 },
+    // Uber/Lyft-style line-up (owner 2026-11-20). ⚠️ Prices are variables — placeholders until set.
+      STANDARD: { baseCents: 350, perKmCents: 95, perMinCents: 30, minimumCents: 800, seats: 4,
+        name: { fr: 'Standard', en: 'Standard' }, blurb: { fr: 'Trajet abordable, jusqu’à 4 passagers', en: 'Affordable rides for up to 4' } },
+      COMFORT: { baseCents: 450, perKmCents: 125, perMinCents: 40, minimumCents: 1100, seats: 4,
+        name: { fr: 'Confort', en: 'Comfort' }, blurb: { fr: 'Véhicules récents, plus d’espace', en: 'Newer cars with extra legroom' } },
+      XL: { baseCents: 550, perKmCents: 160, perMinCents: 45, minimumCents: 1400, seats: 6,
+        name: { fr: 'XL', en: 'XL' }, blurb: { fr: 'VUS ou fourgonnette, jusqu’à 6 passagers', en: 'SUVs and minivans for up to 6' } },
+      PREMIUM: { baseCents: 700, perKmCents: 200, perMinCents: 55, minimumCents: 1800, seats: 4,
+        name: { fr: 'Premium', en: 'Premium' }, blurb: { fr: 'Berlines haut de gamme, chauffeurs les mieux notés', en: 'High-end cars, top-rated drivers' } },
     },
     bookingFeeCents: 250,
     driverCommissionBp: 2500,

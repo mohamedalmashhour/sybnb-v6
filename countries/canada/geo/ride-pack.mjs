@@ -2,7 +2,7 @@
 // ⚠️ Prices are variables (owner 2026-11-20): numbers come from countries/canada/profile.mjs and
 // stay PENDING accountant confirmation. Fares are in CAD cents (rounding 1 cent), like Uber/Lyft.
 // Categories reuse the master ride/vehicle keys: Standard = 'SR Economy', Comfort = 'SR Comfort',
-// XL = 'SR SUV' (display names per country come later). No external geocoder: points come from the
+// XL = 'SR SUV', Premium = 'SR VIP'. Rider-facing names: profile.rides.categories.*.name (see CATEGORY_NAMES). No external geocoder: points come from the
 // app (GPS / map pick) or the small place list below.
 import { profile } from '../profile.mjs'
 import { QUEBEC_RIDE_MARKET } from './ride-market.mjs'
@@ -10,7 +10,7 @@ import { createPricingPack } from '../../../wrapping/rides/pricing-pack.mjs'
 import { smartFare, haversineKm as engineHaversineKm } from '../../../wrapping/rides/smart-fare.mjs'
 import { inBounds } from '../../../wrapping/core/geo.mjs'
 
-const MAP = { 'SR Economy': 'STANDARD', 'SR Comfort': 'COMFORT', 'SR SUV': 'XL' }
+const MAP = { 'SR Economy': 'STANDARD', 'SR Comfort': 'COMFORT', 'SR SUV': 'XL', 'SR VIP': 'PREMIUM' }
 export const SR_CATEGORIES = Object.keys(MAP)
 const dollars = (cents) => cents / 100
 const r = profile.rides
@@ -19,7 +19,10 @@ export const CLASS_PROFILES = {
   'SR Economy': { fuelL100: 7.5, carPriceUsd: 28000, maintenanceUsdPerKm: 0.06, pickupKm: 2, baseExtraUsd: 1, minFareUsd: dollars(r.categories.STANDARD.minimumCents) },
   'SR Comfort': { fuelL100: 8.5, carPriceUsd: 40000, maintenanceUsdPerKm: 0.08, pickupKm: 2, baseExtraUsd: 1.5, minFareUsd: dollars(r.categories.COMFORT.minimumCents) },
   'SR SUV': { fuelL100: 10.5, carPriceUsd: 50000, maintenanceUsdPerKm: 0.1, pickupKm: 2, baseExtraUsd: 2, minFareUsd: dollars(r.categories.XL.minimumCents) },
+  'SR VIP': { fuelL100: 9.5, carPriceUsd: 70000, maintenanceUsdPerKm: 0.12, pickupKm: 2, baseExtraUsd: 3, minFareUsd: dollars(r.categories.PREMIUM.minimumCents) },
 }
+// Rider-facing names and descriptions for each category key, from the country profile.
+export const CATEGORY_NAMES = Object.fromEntries(Object.entries(MAP).map(([cat, key]) => [cat, { name: r.categories[key].name, blurb: r.categories[key].blurb, seats: r.categories[key].seats }]))
 export const DEFAULT_COSTS = {
   fuelPriceUsdPerL: 1.6, resalePct: 30, carLifeKm: 250000, insuranceUsdPerKm: 0.05, safetyReserveUsdPerKm: 0.01,
   emptyKmPct: 30, driverIncomeUsdPerMonth: 3500, hoursPerMonth: 160, utilizationPct: 60, trafficUsdPerMin: 0.05,
@@ -86,5 +89,5 @@ export function quoteSrRide({ pickup, dropoff, category, lowDataMode, pickupCoor
   const stopCoords = stopList.map((t, i) => (okCoords(stopCoordsOverrides?.[i]) ? stopCoordsOverrides[i] : resolvePlaceText(t)))
   const fare = smartFare({ cfg, market: QUEBEC_RIDE_MARKET, category, pickupCoords, dropoffCoords, stopCoords, stopsCount: stopList.length,
     riderCount, bagCount, scheduled, lowDataMode, distanceKmOverride, estimatedMinutesOverride, trafficMultiplierOverride, now })
-  return { ...fare, pickupCoords, dropoffCoords, stopCoords }
+  return { ...fare, ...(CATEGORY_NAMES[fare.category || category] ? { categoryInfo: CATEGORY_NAMES[fare.category || category] } : {}), pickupCoords, dropoffCoords, stopCoords }
 }

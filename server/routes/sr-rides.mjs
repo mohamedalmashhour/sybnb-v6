@@ -1484,6 +1484,14 @@ export async function handleSrRides(req, res, url, context) {
   // before sign-in), validated, per-IP rate limited and cached; the provider key (if any) stays on the server.
   // Public, read-only: the live rates the rider app uses for its first price estimate before /quote
   // answers. Same numbers the engine charges with; nothing private in it.
+  // Ride categories offered in the active country, in order, with rider-facing names (Canada:
+  // Standard / Comfort / XL / Premium). Countries without names get the bare keys.
+  if (url.pathname === '/api/sr/categories') {
+    if (req.method !== 'GET') return methodNotAllowed(res, ['GET'])
+    const names = P().CATEGORY_NAMES || {}
+    return json(res, 200, { ok: true, categories: P().SR_CATEGORIES.map((key) => ({ key, ...(names[key] || {}) })) })
+  }
+
   if (url.pathname === '/api/sr/rates') {
     if (req.method !== 'GET') return methodNotAllowed(res, ['GET'])
     await refreshSrPricing()
@@ -2063,6 +2071,7 @@ export async function handleSrRides(req, res, url, context) {
         legacy: P().normalizePricing(null),
         limits: P().PRICING_LIMITS,
         categories: P().SR_CATEGORIES,
+        categoryNames: P().CATEGORY_NAMES || null,
         classProfiles: P().CLASS_PROFILES,
         examples: pricingExamples(config),
       })

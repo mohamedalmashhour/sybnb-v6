@@ -89,6 +89,11 @@ async function main() {
   check('GST 5% + QST 9.975% on fare + dues', rq.charges?.taxes?.[0]?.minor === Math.round(base * 0.05) && rq.charges?.taxes?.[1]?.minor === Math.round(base * 0.09975), rq.charges)
   check('rider total = fare + dues + taxes', rq.charges?.totalMinor === base + rq.charges.taxMinor, rq.charges)
 
+  const cats = await call('GET', '/api/sr/categories', guest.token)
+  check('Canada offers Standard, Comfort, XL, Premium (Uber/Lyft line-up)', cats.status === 200 && cats.j?.categories?.map((c) => c.name?.en).join(',') === 'Standard,Comfort,XL,Premium', cats.j)
+  const prem = await call('POST', '/api/sr/quote', guest.token, { pickup: 'Montréal centre-ville', dropoff: 'Plateau', category: 'SR VIP', pickupCoords: { lat: 45.5017, lng: -73.5673 }, dropoffCoords: { lat: 45.522, lng: -73.585 } })
+  check('Premium costs more than Standard and shows its name', (prem.j?.quote?.fareMinor || 0) > rq.fareMinor && prem.j?.quote?.categoryInfo?.name?.fr === 'Premium', prem.j?.quote)
+
   console.log('\n=== 5. DRIVER MUST BE GST/QST-REGISTERED (Revenu Québec) ===')
   const driver = await seedUser('driver', ['GUEST', 'DRIVER'], { idDocumentStatus: 'APPROVED' })
   const tn0 = await call('GET', '/api/driver/tax-numbers', driver.token)
