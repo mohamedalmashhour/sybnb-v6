@@ -23,7 +23,9 @@ export const BRANDS = Object.freeze({
     // Owner 2026-11-20: the Canada apps are "Q STAY" (stays) and "Q RIDE" (rides; the name given to
     // Revenu Québec).
     appNames: { stay: 'Q STAY', rides: 'Q RIDE' },
-    webDomain: 'quebecbnb.com', supportEmail: 'info@sybnb.app',
+    // Domains bought 2026-11-20 (GoDaddy, 3 years): qstay.ca (stays + admin/API) and qrides.ca (rides).
+    webDomain: 'qstay.ca', supportEmail: 'info@sybnb.app', // support@qstay.ca once email is set up
+    apps: { stay: 'https://qstay.ca', rides: 'https://qrides.ca', admin: 'https://admin.qstay.ca', api: 'https://api.qstay.ca' },
     colors: { primary: '#1f4e9c', accent: '#d7263d', light: '#ffffff' },
     logos: { platform: '/assets/logos/sybnb-platform.png', mark: '/assets/logos/sybnb-arch-monogram.png' },
     tagline: { ar: 'إقامات ورحلات في كيبيك', en: 'Stays and rides in Québec', fr: 'Séjours et trajets au Québec' },
