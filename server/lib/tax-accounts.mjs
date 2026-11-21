@@ -21,6 +21,20 @@ export async function recordRideGovernmentCharges(tx, { ride, country, at = new 
   return { recorded: res.count }
 }
 
+// Record the government charges of a COMPLETED, paid stay (snapshotted on booking.metadata.staySplit
+// at booking time). Idempotent: one row per (booking, tax code).
+export async function recordStayGovernmentCharges(tx, { booking, country, at = new Date() }) {
+  const gc = booking?.metadata?.staySplit?.governmentCharges
+  if (!gc) return { recorded: 0 }
+  const rows = (gc.taxes || []).filter((t) => t.minor > 0)
+  if (!rows.length) return { recorded: 0 }
+  const res = await tx.taxCollection.createMany({
+    data: rows.map((t) => ({ account: t.account, taxCode: t.code, baseMinor: t.baseMinor, rateBp: t.rateBp, amountMinor: t.minor, country, sourceType: 'stay', sourceId: booking.id, currency: booking.currency, collectedAt: at })),
+    skipDuplicates: true,
+  })
+  return { recorded: res.count }
+}
+
 // Daily or monthly totals per account and tax code, in the country's time zone, with what is still
 // to pay (not yet linked to a remittance).
 export async function collectionTotals({ country, timezone = 'UTC', group = 'day', from, to, account }) {

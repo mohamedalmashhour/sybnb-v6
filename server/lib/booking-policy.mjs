@@ -129,6 +129,7 @@ export function computeGuestTotals({
       totalMinor: q.totalMinor,
       commissionMinor: q.host.commissionMinor,
       hostShareMinor: q.host.payoutMinor,
+      ...(q.governmentCharges ? { governmentCharges: q.governmentCharges, lodgingMinor: q.host.grossMinor, serviceFeeMinor: q.serviceFeeMinor } : {}),
     }
   }
   const cleaningMinor = toMinor(fees.cleaningFeeMinor) || (isShortStay ? Math.round(stay * STR_CLEANING_RATE) : 0)

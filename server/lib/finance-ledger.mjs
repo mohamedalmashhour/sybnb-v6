@@ -153,6 +153,33 @@ export function bookingFinanceSplit(booking, paidAmountMinor = booking?.amountMi
   // never to these labels). Pre-snapshot bookings (created before this existed) have no
   // bookingMetadata.feeSnapshot and fall through to reading the listing's live metadata, same as
   // before.
+  // Government money (Québec stays): the split snapshotted at booking time. The host gets the stay
+  // (nights + cleaning) minus the host commission; the platform gets the guest service fee plus that
+  // commission; the taxes are the government's (held in tax accounts, see recordStayGovernmentCharges)
+  // and are in neither share. Used only when the payment covers the snapshotted total.
+  const staySplit = bookingMetadata.staySplit
+  if (staySplit?.governmentCharges && staySplitBaseMinor >= staySplit.totalMinor - (staySplit.protectionMinor || 0)) {
+    const governmentMinor = staySplit.governmentCharges.totalMinor
+    const hostGrossMinor = staySplit.hostShareMinor
+    const adminShareMinor = Math.max(0, staySplitBaseMinor - hostGrossMinor - governmentMinor)
+    return {
+      stayAmountMinor: staySplit.lodgingMinor,
+      cleaningFeeMinor: 0,
+      taxesMinor: governmentMinor,
+      serviceFeeMinor: staySplit.serviceFeeMinor,
+      parkingFeeMinor: 0,
+      adminCommissionMinor: staySplit.commissionMinor,
+      extraFeesMinor: 0,
+      cancellationProtectionFeeMinor,
+      cancellationProtectionPurchased,
+      hostGrossMinor,
+      adminShareMinor,
+      governmentMinor,
+      governmentCharges: staySplit.governmentCharges,
+      paidTotalMinor,
+    }
+  }
+
   const feeSnapshot = bookingMetadata.feeSnapshot
   const explicitFees = feeSnapshot || (hasExplicitListingFees(listingMetadata) ? readListingFees(listingMetadata) : null)
 

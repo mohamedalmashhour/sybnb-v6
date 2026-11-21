@@ -39,7 +39,7 @@ export async function completeExpiredBookings(where = {}) {
   })
   const completed = await db().booking.findMany({
     where: { id: { in: due.map((b) => b.id) }, status: 'COMPLETED' },
-    select: { id: true, guestId: true, amountMinor: true, currency: true, listing: { select: { ownerId: true } } },
+    select: { id: true, guestId: true, amountMinor: true, currency: true, metadata: true, listing: { select: { ownerId: true } } },
   })
   // Loaded dynamically to avoid a static import cycle (loyalty -> finance-ledger -> booking-lifecycle).
   // Loyalty awarding is idempotent per booking+role, so a re-run of this sweep never double-awards,
@@ -51,6 +51,17 @@ export async function completeExpiredBookings(where = {}) {
     log.warn('loyalty_module_load_failed', { message: error instanceof Error ? error.message : String(error) })
   }
   for (const booking of completed) {
+    // Government money (Québec stays): the stay happened, so its taxes go into the tax accounts.
+    // Idempotent per booking + tax code; a failure is logged and never blocks completion.
+    if (booking.metadata?.staySplit?.governmentCharges) {
+      try {
+        const { recordStayGovernmentCharges } = await import('./tax-accounts.mjs')
+        const { capsuleProfile } = await import('./capsule-profile.mjs')
+        await db().$transaction((tx) => recordStayGovernmentCharges(tx, { booking, country: capsuleProfile()?.key || 'none' }))
+      } catch (error) {
+        log.warn('stay_tax_record_failed', { bookingId: booking.id, message: error instanceof Error ? error.message : String(error) })
+      }
+    }
     notifyBooking('guest_stay_completed', booking.id)
     if (awardBookingCompletion) {
       try {

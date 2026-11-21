@@ -40,9 +40,9 @@ export const profile = Object.freeze({
   // Rates in basis points (1 bp = 0.01%). Applied per service in QC/server/lib/money.mjs.
   taxes: {
     status: 'PENDING_ACCOUNTANT_CONFIRMATION',
-    GST: { bp: 500, label: { fr: 'TPS', en: 'GST' } },
-    QST: { bp: 997.5, label: { fr: 'TVQ', en: 'QST' } },
-    LODGING: { bp: 350, label: { fr: "Taxe sur l'hébergement", en: 'Lodging tax' } },
+    GST: { bp: 500, account: 'GST_QST', label: { fr: 'TPS', en: 'GST' } },
+    QST: { bp: 997.5, account: 'GST_QST', label: { fr: 'TVQ', en: 'QST' } },
+    LODGING: { bp: 350, account: 'LODGING_TAX', label: { fr: "Taxe sur l'hébergement", en: 'Lodging tax' } },
     stays: ['LODGING', 'GST', 'QST'],
     rides: ['GST', 'QST'],
   },

@@ -590,6 +590,25 @@ export async function handleBookings(req, res, url, context) {
       ? await computeStayTotalMinor(listing, checkIn, checkOut, tx)
       : { totalMinor: listing.priceMinor, nights: 0, perNight: [] }
 
+    // Countries whose stay taxes are government money (Québec: lodging tax + GST/QST) snapshot the
+    // split now, so the host payout, the platform share and the tax accounts never drift later.
+    const govTotals = isShortStay ? computeGuestTotals({
+      stayMinor: quote.totalMinor,
+      fees: readListingFees(listing.metadata || {}),
+      extraFeesMinor: metadataMinor(listing.metadata, 'extraFeesMinor'),
+      isShortStay,
+      protection: body.cancellationProtectionPurchased === true || body.cancellationProtection === true,
+    }) : null
+    const staySplit = govTotals?.governmentCharges ? {
+      totalMinor: govTotals.totalMinor,
+      lodgingMinor: govTotals.lodgingMinor,
+      serviceFeeMinor: govTotals.serviceFeeMinor || 0,
+      commissionMinor: govTotals.commissionMinor,
+      hostShareMinor: govTotals.hostShareMinor,
+      protectionMinor: govTotals.protectionMinor || 0,
+      governmentCharges: govTotals.governmentCharges,
+    } : null
+
     return tx.booking.create({
       data: {
         listingId: listing.id,
@@ -601,6 +620,7 @@ export async function handleBookings(req, res, url, context) {
         currency: listing.currency,
         metadata: {
           ...buildBookingMetadata(body, listing, quote.totalMinor),
+          ...(staySplit ? { staySplit } : {}),
           ...(guestCount ? { guests: guestCount } : {}),
           // What the variable pricing did, kept on the booking for support/audit (informational).
           ...(quote.nights ? { stayPricing: { subtotalMinor: quote.subtotalMinor, discountMinor: quote.discountMinor || 0, discountKind: quote.discountKind || null, discountPct: quote.discountPct || 0, seasonNights: (quote.perNight || []).filter((night) => night.season).length, weekendNights: (quote.perNight || []).filter((night) => night.basis === 'weekend').length } } : {}),

@@ -83,6 +83,13 @@ export function quoteStay({ listing, nights, profile, protection = false, stayMi
   const totalMinor = lodgingBase + serviceFee + otherFees + protectionMinor + taxMinor
   const commissionBaseMinor = stays.commissionBase === 'TOTAL_EXCL_PROTECTION' ? totalMinor - protectionMinor : lodgingBase
   const commission = pct(commissionBaseMinor, stays.hostCommissionBp ?? 0)
+  // Government money (taxes whose country setting names an account, e.g. Québec LODGING_TAX and
+  // GST_QST): collected from the guest, held by the company in that account, paid to the government
+  // — never part of the host payout or the platform revenue.
+  const govTaxes = taxList.filter((t) => t.account && t.minor > 0)
+  const governmentCharges = govTaxes.length
+    ? { taxes: govTaxes.map(({ code, account, baseMinor, rateBp, minor }) => ({ code, account, baseMinor, rateBp, minor })), totalMinor: sum(govTaxes), status: taxes.status ?? 'NONE' }
+    : null
   return {
     currency: currencies.default,
     nights,
@@ -94,6 +101,7 @@ export function quoteStay({ listing, nights, profile, protection = false, stayMi
     protectionMinor,
     totalMinor,
     host: { grossMinor: commissionBaseMinor, commissionMinor: commission, payoutMinor: commissionBaseMinor - commission },
+    ...(governmentCharges ? { governmentCharges, serviceFeeMinor: serviceFee } : {}),
   }
 }
 

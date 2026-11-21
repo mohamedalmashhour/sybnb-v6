@@ -15,7 +15,7 @@ export function taxLines(base, keys = [], taxes = {}) {
   return keys.map((key) => {
     const t = taxes[key]
     if (!t) throw new Error(`tax '${key}' is not defined in the country profile`)
-    return { code: key, label: t.label, rateBp: t.bp, baseMinor: base, minor: pct(base, t.bp) }
+    return { code: key, label: t.label, rateBp: t.bp, baseMinor: base, minor: pct(base, t.bp), ...(t.account ? { account: t.account } : {}) }
   })
 }
 

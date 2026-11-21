@@ -60,6 +60,25 @@ async function main() {
   const exp = b.j?.booking?.expiresAt ? new Date(b.j.booking.expiresAt) - new Date(b.j.booking.createdAt) : null
   check('unpaid booking expires after 30 minutes', exp === 30 * 60e3, { expiresInMs: exp })
 
+  console.log('\n=== 3b. STAY GOVERNMENT MONEY: LODGING_TAX + GST_QST, HOST PAID WITHOUT TAXES ===')
+  const bk = await db().booking.findUnique({ where: { id: b.j?.booking?.id }, include: { listing: true } })
+  const ss = bk?.metadata?.staySplit
+  const lodgingTax = 1050, gst = Math.round(33600 * 0.05), qst = Math.round(33600 * 0.09975)
+  check('booking snapshots the stay split with the government charges', ss?.governmentCharges?.totalMinor === lodgingTax + gst + qst, ss)
+  check('lodging tax goes to LODGING_TAX, GST/QST to GST_QST', ss?.governmentCharges?.taxes?.find((t) => t.code === 'LODGING')?.account === 'LODGING_TAX' && ss.governmentCharges.taxes.filter((t) => t.account === 'GST_QST').length === 2, ss?.governmentCharges)
+  const { bookingFinanceSplit } = await import('../../server/lib/finance-ledger.mjs')
+  const sp = bookingFinanceSplit(bk, ss.totalMinor) // the guest pays the full total (stay + fee + taxes)
+  check('host gets stay minus 3% commission, no taxes (291.00)', sp.hostGrossMinor === 30000 - 900, sp)
+  check('platform gets guest fee + commission, no taxes (45.00)', sp.adminShareMinor === 3600 + 900, sp)
+  check('host + platform + government = what the guest paid', sp.hostGrossMinor + sp.adminShareMinor + sp.governmentMinor === ss.totalMinor, sp)
+  await db().booking.update({ where: { id: bk.id }, data: { status: 'CONFIRMED', checkIn: new Date(Date.now() - 3 * 864e5), checkOut: new Date(Date.now() - 864e5) } })
+  const { completeExpiredBookings } = await import('../../server/lib/booking-lifecycle.mjs')
+  await completeExpiredBookings({ id: bk.id })
+  const stayRows = await db().taxCollection.findMany({ where: { sourceType: 'stay', sourceId: bk.id } })
+  check('completed stay records its taxes in the tax accounts', stayRows.length === 3 && stayRows.reduce((a, r) => a + r.amountMinor, 0) === lodgingTax + gst + qst, stayRows)
+  await completeExpiredBookings({ id: bk.id })
+  check('re-running completion never double-records', (await db().taxCollection.count({ where: { sourceType: 'stay', sourceId: bk.id } })) === 3)
+
   console.log('\n=== 4. RIDE QUOTE IN MONTRÉAL ===')
   const r = await call('POST', '/api/sr/quote', guest.token, { pickup: 'Montréal centre-ville', dropoff: 'Plateau', category: 'SR Comfort', pickupCoords: { lat: 45.5017, lng: -73.5673 }, dropoffCoords: { lat: 45.522, lng: -73.585 } })
   check('ride quote answers for Canada (CAD)', r.status === 200 && (r.j?.quote?.currency || r.j?.currency) === 'CAD', r)
