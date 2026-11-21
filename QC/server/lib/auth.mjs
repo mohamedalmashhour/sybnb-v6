@@ -23,11 +23,23 @@ export const isEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) &&
 
 const adminEmails = () => new Set(String(process.env.QC_ADMIN_EMAILS ?? '').split(',').map(normalizeEmail).filter(Boolean))
 
+// App-store review account (Google Play / Apple reviewers cannot read a mailbox). Off unless BOTH
+// QC_REVIEW_EMAIL and QC_REVIEW_CODE (exactly 6 digits) are set. Only that one email gets the fixed
+// code; it is a normal GUEST account (no admin, host or driver role), still rate-limited and
+// attempt-limited like any other code. Unset both to turn it off after review.
+export function reviewCodeFor(email) {
+  const reviewEmail = normalizeEmail(process.env.QC_REVIEW_EMAIL)
+  const reviewCode = String(process.env.QC_REVIEW_CODE ?? '').trim()
+  if (!reviewEmail || !/^\d{6}$/.test(reviewCode)) return null
+  if (adminEmails().has(reviewEmail)) return null
+  return email === reviewEmail ? reviewCode : null
+}
+
 export async function issueLoginCode(email) {
   const since = new Date(Date.now() - CODE_WINDOW_MS)
   const recent = await db().loginCode.count({ where: { email, createdAt: { gte: since } } })
   if (recent >= MAX_CODES_PER_WINDOW) throw new HttpError(429, 'TOO_MANY_CODES', 'Too many codes requested. Try again in a few minutes.')
-  const code = String(randomInt(0, 1_000_000)).padStart(6, '0')
+  const code = reviewCodeFor(email) ?? String(randomInt(0, 1_000_000)).padStart(6, '0')
   await db().loginCode.create({ data: { email, codeHash: keyed('code', `${email}:${code}`), expiresAt: new Date(Date.now() + CODE_TTL_MS) } })
   return code
 }
